@@ -10,4 +10,14 @@ for (const f of ["data.js", "engine.js"]) {
 fs.writeFileSync("car_tco.html", html);
 fs.mkdirSync("docs", { recursive: true });
 fs.writeFileSync("docs/index.html", html);
-console.log("car_tco.html / docs/index.html を生成しました (" + Math.round(html.length / 1024) + "KB)");
+
+// articles/ を docs/articles/ にコピー(記事ページ)
+let articleCount = 0;
+if (fs.existsSync("articles")) {
+  fs.mkdirSync("docs/articles", { recursive: true });
+  for (const f of fs.readdirSync("articles")) {
+    fs.copyFileSync(`articles/${f}`, `docs/articles/${f}`);
+    articleCount++;
+  }
+}
+console.log(`car_tco.html / docs/index.html を生成しました (${Math.round(html.length / 1024)}KB)、記事${articleCount}件をdocs/articles/に反映`);
