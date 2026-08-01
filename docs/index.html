@@ -179,6 +179,7 @@
   <section class="panel">
     <h2>📖 読みもの</h2>
     <ul style="margin:0;padding-left:20px;font-size:14px;line-height:2">
+      <li><a href="articles/2026-09-resale-care.html">同じ車なのに査定が50万違う理由 — 残価は乗り方で作れる</a></li>
       <li><a href="articles/2026-09-lease.html">街で見かける「月5,000円で新車」の真実 — リースは損なのか、数字で確かめた</a></li>
       <li><a href="articles/2026-08.html">【2026年8月版】とにかく損したくない人へ。今いちばん「実質安い」車はこれ</a></li>
     </ul>
@@ -863,6 +864,16 @@ if (typeof module !== "undefined") {
       (winner.car.deliveryTime === "6ヶ月以上" && top3[1]
         ? `<p style="background:#fff4e6;border:1px solid #ffc078;border-radius:8px;padding:10px 14px;font-size:13px">⚠ 1位の${winner.car.name}は納期${winner.car.deliveryTime}。すぐ乗りたい場合は<b>${top3[1].car.name}(2位・納期${top3[1].car.deliveryTime || "—"})</b>も検討を。</p>`
         : "") + diffMsg +
+      `<div style="margin-top:14px;border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:#f8fafd">
+        <div style="font-weight:700;margin-bottom:6px">🛡 残価を守る5箇条(どの車を選んでも効く)</div>
+        <ol style="margin:0;padding-left:20px;font-size:13px;line-height:1.9">
+          <li>禁煙(車内でどうしても吸うなら売却時-10万超を覚悟)</li>
+          <li>記録簿を捨てない(ディーラー整備の履歴は査定でプラス)</li>
+          <li>傷は放置しない(小さいうちに直す方が安い)</li>
+          <li>改造しない(純正が一番高い)</li>
+          <li>可能なら屋根下保管(特に濃色車)</li>
+        </ol>
+      </div>` +
       `<p><a href="#" id="wiz-apply" style="font-size:13px">▼ 全条件を自分で調整する(この条件をランキング表に反映)</a></p>`;
     $("wiz-apply").addEventListener("click", (e) => {
       e.preventDefault();
