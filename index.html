@@ -280,7 +280,7 @@
       .map((r, i) => {
         const b = r.breakdown;
         return `<tr>
-          <td class="rank">${i + 1}</td><td>${r.car.name}</td>
+          <td class="rank">${i + 1}</td><td>${r.car.name}${r.car.confidence === "low" ? "※" : ""}</td>
           <td class="peryear">${man(r.perYear)}円</td><td>${man(r.total)}円</td>
           <td>${man(r.acquisition)}円</td><td>${r.salePrice ? man(r.salePrice) + "円" : "—"}</td>
           <td>${man(b.depreciation)}</td><td>${man(b.tax)}</td><td>${man(b.shaken)}</td>
@@ -349,7 +349,7 @@
   }
 
   $("footer").textContent =
-    `残価率は中古車掲載相場ベースの概算です。実際の売却額・保険料・整備費は条件により変動します。データ基準日: ${DATA_DATE}`;
+    `残価率は中古車掲載相場ベースの概算です。実際の売却額・保険料・整備費は条件により変動します。※印の車種は残価率に推定値を含みます。データ基準日: ${DATA_DATE}`;
 
   window.addEventListener("resize", render);
   render();

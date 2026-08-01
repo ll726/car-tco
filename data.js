@@ -17,20 +17,20 @@ const CARS = [
   { id: "cclass", segment: "輸入・EV",   name: "メルセデス・ベンツ Cクラス", price: 6900000, cc: 1494, weight: 1690, wltc: 16.2, resid: { y3: 50, y5: 35, y7: 22, y10: 8 }, import: true,  note: "値落ち大の代表" },
   { id: "bmw3", segment: "輸入・EV",     name: "BMW 3シリーズ",              price: 6300000, cc: 1998, weight: 1640, wltc: 13.5, resid: { y3: 48, y5: 33, y7: 20, y10: 8 }, import: true,  note: "同上" },
   { id: "prius", segment: "セダン・その他", name: "トヨタ プリウス",         price: 2750000, cc: 1986, weight: 1360, wltc: 32.6, resid: { y3: 64, y5: 50, y7: 38, y10: 15 }, import: false, note: "2.0 HV" },
-  { id: "sienta", segment: "ミニバン",   name: "トヨタ シエンタ",            price: 2300000, cc: 1490, weight: 1330, wltc: 28.2, resid: { y3: 65, y5: 50, y7: 36, y10: 13 }, import: false, note: "HV" },
+  { id: "sienta", segment: "ミニバン",   name: "トヨタ シエンタ",            price: 2300000, cc: 1490, weight: 1330, wltc: 28.2, resid: { y3: 65, y5: 50, y7: 36, y10: 13 }, import: false, confidence: "low", note: "HV" }, // 5年以降は推定(個別相場未確認。国産ミニバン平均カーブで外挿)
   { id: "harrier", segment: "SUV",      name: "トヨタ ハリアー",            price: 3500000, cc: 2487, weight: 1680, wltc: 22.3, resid: { y3: 78, y5: 58, y7: 47, y10: 18 }, import: false, note: "HV" },
   { id: "voxy", segment: "ミニバン",    name: "トヨタ ヴォクシー",          price: 3090000, cc: 1797, weight: 1670, wltc: 23.0, resid: { y3: 72, y5: 58, y7: 48, y10: 18 }, import: false, note: "HV" },
-  { id: "crownsp", segment: "セダン・その他", name: "トヨタ クラウンスポーツ", price: 5900000, cc: 2487, weight: 1770, wltc: 21.3, resid: { y3: 62, y5: 46, y7: 33, y10: 12 }, import: false, note: "HV" },
-  { id: "note", segment: "コンパクト",  name: "日産 ノート",                price: 2300000, cc: 1198, weight: 1220, wltc: 28.4, resid: { y3: 55, y5: 42, y7: 28, y10: 10 }, import: false, note: "e-POWER" },
-  { id: "cx5", segment: "SUV",          name: "マツダ CX-5",                price: 2900000, cc: 2188, weight: 1680, wltc: 17.4, resid: { y3: 60, y5: 44, y7: 30, y10: 11 }, import: false, fuelPrice: 150, note: "ディーゼル(軽油150円/L)" },
+  { id: "crownsp", segment: "セダン・その他", name: "トヨタ クラウンスポーツ", price: 5900000, cc: 2487, weight: 1770, wltc: 21.3, resid: { y3: 62, y5: 46, y7: 33, y10: 12 }, import: false, confidence: "low", note: "HV" }, // 残価4点すべて推定(2023年発売で実測相場なし。先代クラウン相場から外挿)
+  { id: "note", segment: "コンパクト",  name: "日産 ノート",                price: 2300000, cc: 1198, weight: 1220, wltc: 28.4, resid: { y3: 55, y5: 42, y7: 28, y10: 10 }, import: false, confidence: "low", note: "e-POWER" }, // 残価は推定色強め(個別相場未確認。コンパクト平均カーブ)
+  { id: "cx5", segment: "SUV",          name: "マツダ CX-5",                price: 2900000, cc: 2188, weight: 1680, wltc: 17.4, resid: { y3: 60, y5: 44, y7: 30, y10: 11 }, import: false, confidence: "low", fuelPrice: 150, note: "ディーゼル(軽油150円/L)" }, // 5年以降は推定(3年落ちのみ相場確認)
   { id: "roadster", segment: "セダン・その他", name: "マツダ ロードスター",  price: 2900000, cc: 1496, weight: 1010, wltc: 16.8, resid: { y3: 74, y5: 65, y7: 52, y10: 32 }, import: false, note: "スポーツで残価堅い" },
-  { id: "forester", segment: "SUV",     name: "スバル フォレスター",        price: 3100000, cc: 1795, weight: 1570, wltc: 13.6, resid: { y3: 68, y5: 52, y7: 38, y10: 14 }, import: false, note: "1.8ターボ" },
-  { id: "spacia", segment: "軽",        name: "スズキ スペーシア",          price: 1550000, cc: 658,  weight: 850,  wltc: 23.9, resid: { y3: 65, y5: 50, y7: 35, y10: 12 }, import: false, note: "軽ハイトワゴン" },
-  { id: "tanto", segment: "軽",         name: "ダイハツ タント",            price: 1500000, cc: 658,  weight: 900,  wltc: 21.9, resid: { y3: 60, y5: 46, y7: 32, y10: 10 }, import: false, note: "軽ハイトワゴン" },
-  { id: "delica", segment: "ミニバン",  name: "三菱 デリカD:5",             price: 4050000, cc: 2267, weight: 1930, wltc: 12.6, resid: { y3: 75, y5: 58, y7: 44, y10: 22 }, import: false, fuelPrice: 150, note: "ディーゼル(軽油150円/L)" },
-  { id: "vezel", segment: "SUV",        name: "ホンダ ヴェゼル",            price: 2500000, cc: 1496, weight: 1350, wltc: 25.0, resid: { y3: 66, y5: 52, y7: 38, y10: 14 }, import: false, note: "e:HEV" },
-  { id: "nx", segment: "SUV",           name: "レクサス NX",                price: 5000000, cc: 2487, weight: 1850, wltc: 19.9, resid: { y3: 72, y5: 62, y7: 45, y10: 18 }, import: false, note: "350h HV" },
-  { id: "model3", segment: "輸入・EV",  name: "テスラ モデル3",             price: 5300000, cc: 0, weight: 1760, wltc: 0, ev: true, kmPerKwh: 7.0, resid: { y3: 48, y5: 33, y7: 20, y10: 8 }, import: true, note: "EV(電費7.0km/kWh・電気31円/kWh)" },
+  { id: "forester", segment: "SUV",     name: "スバル フォレスター",        price: 3100000, cc: 1795, weight: 1570, wltc: 13.6, resid: { y3: 68, y5: 52, y7: 38, y10: 14 }, import: false, confidence: "low", note: "1.8ターボ" }, // 5年以降は推定(3年落ち72%のみ相場確認)
+  { id: "spacia", segment: "軽",        name: "スズキ スペーシア",          price: 1550000, cc: 658,  weight: 850,  wltc: 23.9, resid: { y3: 65, y5: 50, y7: 35, y10: 12 }, import: false, confidence: "low", note: "軽ハイトワゴン" }, // 軽ランキング記事ベースの概算(グレード別実測なし)
+  { id: "tanto", segment: "軽",         name: "ダイハツ タント",            price: 1500000, cc: 658,  weight: 900,  wltc: 21.9, resid: { y3: 60, y5: 46, y7: 32, y10: 10 }, import: false, confidence: "low", note: "軽ハイトワゴン" }, // 軽ランキング記事ベースの概算(グレード別実測なし)
+  { id: "delica", segment: "ミニバン",  name: "三菱 デリカD:5",             price: 4050000, cc: 2267, weight: 1930, wltc: 12.6, resid: { y3: 75, y5: 58, y7: 44, y10: 22 }, import: false, confidence: "low", fuelPrice: 150, note: "ディーゼル(軽油150円/L)" }, // 7年以降は推定(3年80%/5年は相場確認)
+  { id: "vezel", segment: "SUV",        name: "ホンダ ヴェゼル",            price: 2500000, cc: 1496, weight: 1350, wltc: 25.0, resid: { y3: 66, y5: 52, y7: 38, y10: 14 }, import: false, confidence: "low", note: "e:HEV" }, // 残価は推定色強め(個別相場未確認。国産SUV平均カーブ)
+  { id: "nx", segment: "SUV",           name: "レクサス NX",                price: 5000000, cc: 2487, weight: 1850, wltc: 19.9, resid: { y3: 72, y5: 62, y7: 45, y10: 18 }, import: false, confidence: "low", note: "350h HV" }, // 7年/10年は推定(現行2021年発売。3年72%/5年62%は掲載相場、以降は先代NX相場から外挿)
+  { id: "model3", segment: "輸入・EV",  name: "テスラ モデル3",             price: 5300000, cc: 0, weight: 1760, wltc: 0, ev: true, kmPerKwh: 7.0, resid: { y3: 48, y5: 33, y7: 20, y10: 8 }, import: true, confidence: "low", note: "EV(電費7.0km/kWh・電気31円/kWh)" }, // 7年/10年は推定(3年約50%/5年30%台は相場確認。以降は輸入車カーブで外挿)
 ];
 
 if (typeof module !== "undefined") module.exports = { CARS, DATA_DATE };
