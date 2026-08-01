@@ -82,6 +82,37 @@ function shakenYears(years, isUsed) {
   return list;
 }
 
+// ---- 燃料費(購入・リース共通) --------------------------------------------
+
+function fuelCost(car, annualKm, fuelPrice, years, settings = DEFAULT_SETTINGS) {
+  if (car.ev) return (annualKm / car.kmPerKwh) * settings.elecPricePerKwh * years;
+  const realFuelEcon = car.wltc * settings.fuelCorrection;
+  return (annualKm / realFuelEcon) * fuelPrice * years;
+}
+
+// ---- リース計算 -----------------------------------------------------------
+
+// params: { monthly(月額円), bonus(ボーナス払い円/回・年2回), years(契約年数),
+//           kmLimit(契約走行距離上限km/年), overageRate(超過単価円/km, 既定8),
+//           annualKm(実走行km/年),
+//           car, fuelPrice, insuranceAnnual, parkingMonthly (実質総額の算出用) }
+// リースは税金・車検・自賠責込み/任意保険・駐車場・燃料は別、が一般的な契約。
+// 満了時に車は返却されるため資産は0円。
+function calcLease(params, settings = DEFAULT_SETTINGS) {
+  const { monthly, bonus = 0, years, kmLimit, overageRate = 8, annualKm, car, insuranceAnnual = 0, parkingMonthly = 0 } = params;
+  const overage = Math.max(0, annualKm - kmLimit) * overageRate * years;
+  const leaseTotal = monthly * 12 * years + bonus * 2 * years + overage;
+  const fuelPrice = car && car.fuelPrice != null ? car.fuelPrice : params.fuelPrice;
+  const fuel = car ? fuelCost(car, annualKm, fuelPrice, years, settings) : 0;
+  const effectiveTotal = leaseTotal + insuranceAnnual * years + parkingMonthly * 12 * years + fuel;
+  return {
+    leaseTotal: Math.round(leaseTotal),
+    overage: Math.round(overage),
+    fuel: Math.round(fuel),
+    effectiveTotal: Math.round(effectiveTotal),
+  };
+}
+
 // ---- メイン計算 -----------------------------------------------------------
 
 // car: data.jsの1要素
@@ -141,13 +172,7 @@ function calcTCO(car, opts, settings = DEFAULT_SETTINGS) {
   const shakenMaint = shakens.length * maintBase * maintFactor;
 
   // 燃料費(EVは電費×電気単価、それ以外はWLTC×補正×燃料単価)
-  let fuelTotal;
-  if (car.ev) {
-    fuelTotal = (annualKm / car.kmPerKwh) * settings.elecPricePerKwh * years;
-  } else {
-    const realFuelEcon = car.wltc * settings.fuelCorrection;
-    fuelTotal = (annualKm / realFuelEcon) * fuelPrice * years;
-  }
+  const fuelTotal = fuelCost(car, annualKm, fuelPrice, years, settings);
 
   // 任意保険・駐車場
   const insuranceTotal = insuranceAnnual * years;
@@ -188,5 +213,5 @@ function calcAll(cars, opts, settings = DEFAULT_SETTINGS) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { calcTCO, calcAll, autoTax, weightTaxPerShaken, residualRate, mileageAdjustedRate, shakenYears, DEFAULT_SETTINGS };
+  module.exports = { calcTCO, calcAll, calcLease, fuelCost, autoTax, weightTaxPerShaken, residualRate, mileageAdjustedRate, shakenYears, DEFAULT_SETTINGS };
 }

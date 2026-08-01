@@ -1,6 +1,6 @@
 // 計算エンジンのコンソール検証: node test.js
 const { CARS, USED_MARGIN } = require("./data.js");
-const { calcAll, calcTCO, autoTax, weightTaxPerShaken, residualRate, mileageAdjustedRate, shakenYears } = require("./engine.js");
+const { calcAll, calcTCO, calcLease, autoTax, weightTaxPerShaken, residualRate, mileageAdjustedRate, shakenYears } = require("./engine.js");
 
 const man = (n) => (n / 10000).toFixed(1) + "万";
 
@@ -132,6 +132,24 @@ console.assert(JSON.stringify(shakenYears(5, true)) === "[2,4]", "中古5年=2�
   console.assert(u.acquisition === Math.round(yaris.price * 0.62 * USED_MARGIN), "中古取得=買取残価×1.15");
   console.assert(u.salePrice === Math.round(yaris.price * (residualRate(yaris.resid, 8) / 100)), "売却は買取ベースのまま");
   console.assert(USED_MARGIN === 1.15, "USED_MARGIN定数");
+}
+
+// リース計算
+{
+  const nbox = CARS.find((c) => c.id === "nbox");
+  // ボーナス併用: 月5,500円+ボーナス38,500円×年2回×7年(超過なし)
+  const l1 = calcLease({ monthly: 5500, bonus: 38500, years: 7, kmLimit: 12000, annualKm: 10000 });
+  console.assert(l1.leaseTotal === 5500 * 12 * 7 + 38500 * 2 * 7, "リース総額=月額+ボーナス年2回");
+  console.assert(l1.overage === 0, "上限内は超過金なし");
+  // 走行超過: 年15,000km走行・上限12,000km → 超過3,000km×8円×7年
+  const l2 = calcLease({ monthly: 5500, bonus: 38500, years: 7, kmLimit: 12000, annualKm: 15000 });
+  console.assert(l2.overage === 3000 * 8 * 7, "超過金=超過km×8円×年数");
+  console.assert(l2.leaseTotal === l1.leaseTotal + l2.overage, "超過金は総額に加算");
+  // 実質総額 = リース総額 + 保険 + 駐車場 + 燃料(既存fuelCostロジック)
+  const l3 = calcLease({ monthly: 5500, bonus: 38500, years: 7, kmLimit: 12000, annualKm: 10000, car: nbox, fuelPrice: 170, insuranceAnnual: 60000, parkingMonthly: 10000 });
+  const expFuel = Math.round((10000 / (21.5 * 0.85)) * 170 * 7);
+  console.assert(l3.fuel === expFuel, "リースの燃料費は既存ロジック");
+  console.assert(l3.effectiveTotal === Math.round(l1.leaseTotal + 60000 * 7 + 10000 * 12 * 7 + (10000 / (21.5 * 0.85)) * 170 * 7), "リース実質総額");
 }
 
 console.log("assert完了(エラー表示が無ければOK)");

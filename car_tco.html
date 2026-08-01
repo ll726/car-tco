@@ -142,6 +142,40 @@
     <div class="legend" id="sweep-legend"></div>
   </section>
   <section class="panel">
+    <details id="lease-details">
+      <summary style="font-size:15px;font-weight:700;cursor:pointer">🆚 リースと比べる(カーリース vs 購入)</summary>
+      <div class="controls" style="margin-top:14px">
+        <div class="ctl">
+          <label>比較する車種</label>
+          <select id="ls-car" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:14px"></select>
+        </div>
+        <div class="ctl">
+          <label>リース月額(円)</label>
+          <input type="number" id="ls-monthly" value="5500" min="0" step="500">
+        </div>
+        <div class="ctl">
+          <label>ボーナス払い(円/回・年2回)</label>
+          <input type="number" id="ls-bonus" value="38500" min="0" step="500">
+        </div>
+        <div class="ctl">
+          <label>契約年数</label>
+          <select id="ls-years" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:14px">
+            <option value="7" selected>7年</option>
+            <option value="9">9年</option>
+            <option value="11">11年</option>
+          </select>
+        </div>
+        <div class="ctl">
+          <label>走行距離上限(km/年)</label>
+          <input type="number" id="ls-kmlimit" value="12000" min="3000" step="1000">
+        </div>
+      </div>
+      <div id="lease-result" style="margin-top:14px"></div>
+      <p style="font-size:12px;color:var(--sub);margin:10px 0 0">リースは頭金不要・税金/車検/自賠責コミコミの手軽さが利点。ここでは総額のみを比較しています。任意保険・駐車場・燃料は両者とも別途として同条件で加算。実走行距離は上の条件設定の値を使用します。</p>
+    </details>
+  </section>
+
+  <section class="panel">
     <h2>📖 読みもの</h2>
     <ul style="margin:0;padding-left:20px;font-size:14px;line-height:2">
       <li><a href="articles/2026-08.html">【2026年8月版】とにかく損したくない人へ。今いちばん「実質安い」車はこれ</a></li>
@@ -276,6 +310,37 @@ function shakenYears(years, isUsed) {
   return list;
 }
 
+// ---- 燃料費(購入・リース共通) --------------------------------------------
+
+function fuelCost(car, annualKm, fuelPrice, years, settings = DEFAULT_SETTINGS) {
+  if (car.ev) return (annualKm / car.kmPerKwh) * settings.elecPricePerKwh * years;
+  const realFuelEcon = car.wltc * settings.fuelCorrection;
+  return (annualKm / realFuelEcon) * fuelPrice * years;
+}
+
+// ---- リース計算 -----------------------------------------------------------
+
+// params: { monthly(月額円), bonus(ボーナス払い円/回・年2回), years(契約年数),
+//           kmLimit(契約走行距離上限km/年), overageRate(超過単価円/km, 既定8),
+//           annualKm(実走行km/年),
+//           car, fuelPrice, insuranceAnnual, parkingMonthly (実質総額の算出用) }
+// リースは税金・車検・自賠責込み/任意保険・駐車場・燃料は別、が一般的な契約。
+// 満了時に車は返却されるため資産は0円。
+function calcLease(params, settings = DEFAULT_SETTINGS) {
+  const { monthly, bonus = 0, years, kmLimit, overageRate = 8, annualKm, car, insuranceAnnual = 0, parkingMonthly = 0 } = params;
+  const overage = Math.max(0, annualKm - kmLimit) * overageRate * years;
+  const leaseTotal = monthly * 12 * years + bonus * 2 * years + overage;
+  const fuelPrice = car && car.fuelPrice != null ? car.fuelPrice : params.fuelPrice;
+  const fuel = car ? fuelCost(car, annualKm, fuelPrice, years, settings) : 0;
+  const effectiveTotal = leaseTotal + insuranceAnnual * years + parkingMonthly * 12 * years + fuel;
+  return {
+    leaseTotal: Math.round(leaseTotal),
+    overage: Math.round(overage),
+    fuel: Math.round(fuel),
+    effectiveTotal: Math.round(effectiveTotal),
+  };
+}
+
 // ---- メイン計算 -----------------------------------------------------------
 
 // car: data.jsの1要素
@@ -335,13 +400,7 @@ function calcTCO(car, opts, settings = DEFAULT_SETTINGS) {
   const shakenMaint = shakens.length * maintBase * maintFactor;
 
   // 燃料費(EVは電費×電気単価、それ以外はWLTC×補正×燃料単価)
-  let fuelTotal;
-  if (car.ev) {
-    fuelTotal = (annualKm / car.kmPerKwh) * settings.elecPricePerKwh * years;
-  } else {
-    const realFuelEcon = car.wltc * settings.fuelCorrection;
-    fuelTotal = (annualKm / realFuelEcon) * fuelPrice * years;
-  }
+  const fuelTotal = fuelCost(car, annualKm, fuelPrice, years, settings);
 
   // 任意保険・駐車場
   const insuranceTotal = insuranceAnnual * years;
@@ -382,7 +441,7 @@ function calcAll(cars, opts, settings = DEFAULT_SETTINGS) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { calcTCO, calcAll, autoTax, weightTaxPerShaken, residualRate, mileageAdjustedRate, shakenYears, DEFAULT_SETTINGS };
+  module.exports = { calcTCO, calcAll, calcLease, fuelCost, autoTax, weightTaxPerShaken, residualRate, mileageAdjustedRate, shakenYears, DEFAULT_SETTINGS };
 }
 </script>
 <script>
@@ -438,6 +497,7 @@ if (typeof module !== "undefined") {
     renderHighlight(results);
     renderChart(results);
     renderSweep();
+    renderLease();
   }
 
   // 車種ごとの識別色(折れ線用)。全車種数に対応するためHSLで機械生成し、idに固定で割り当て
@@ -600,6 +660,48 @@ if (typeof module !== "undefined") {
       ctx.textAlign = "left";
       ctx.fillText(man(r.total) + "円", x + 6, y + rowH / 2);
     });
+  }
+
+  // ---- リース vs 購入 比較 ----
+  $("ls-car").innerHTML = CARS.map((c) => `<option value="${c.id}"${c.id === "nbox" ? " selected" : ""}>${c.name}</option>`).join("");
+  ["ls-car", "ls-monthly", "ls-bonus", "ls-years", "ls-kmlimit"].forEach((id) =>
+    $(id).addEventListener("input", renderLease)
+  );
+
+  function renderLease() {
+    const car = CARS.find((c) => c.id === $("ls-car").value);
+    const years = +$("ls-years").value;
+    const common = { annualKm: state.annualKm, fuelPrice: state.fuelPrice, insuranceAnnual: state.insuranceAnnual, parkingMonthly: state.parkingMonthly };
+    const lease = calcLease({
+      monthly: +$("ls-monthly").value || 0,
+      bonus: +$("ls-bonus").value || 0,
+      years,
+      kmLimit: +$("ls-kmlimit").value || 0,
+      car,
+      ...common,
+    });
+    const buyKeep = calcTCO(car, { ...common, years, sell: false, buyAge: 0 });
+    const buySell = calcTCO(car, { ...common, years, sell: true, buyAge: 0 });
+
+    const bars = [
+      ["リース(実質総額)", lease.effectiveTotal, "#9c36b5"],
+      ["購入・乗りつぶし", buyKeep.total, "#4c6ef5"],
+      ["購入・満了時に売却", buySell.total, "#37b24d"],
+    ];
+    const maxV = Math.max(...bars.map((b) => b[1]));
+    const diff = lease.effectiveTotal - buyKeep.total;
+    const overageNote = lease.overage > 0 ? `(走行超過金 ${man(lease.overage)}円を含む)` : "";
+    $("lease-result").innerHTML =
+      bars.map(([label, v, color]) =>
+        `<div style="display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px">
+          <span style="width:150px;text-align:right;color:var(--sub)">${label}</span>
+          <div style="flex:1;background:#f0f2f6;border-radius:4px"><div style="width:${Math.max(2, (v / maxV) * 100)}%;background:${color};border-radius:4px;padding:5px 8px;color:#fff;font-weight:700;white-space:nowrap">${man(v)}円</div></div>
+        </div>`
+      ).join("") +
+      `<p style="font-size:14px;margin:12px 0 0">${years}年間の実質総額: リース<b>${man(lease.effectiveTotal)}円</b>${overageNote} / 購入(乗りつぶし)<b>${man(buyKeep.total)}円</b>。` +
+      (diff >= 0
+        ? `リースが<b>${man(diff)}円高く</b>、さらに満了時に車が手元に残らない差があります。`
+        : `リースが<b>${man(-diff)}円安い</b>計算ですが、満了時に車が手元に残らない点に注意。`) + `</p>`;
   }
 
   // ---- かんたん診断(既存エンジンcalcAllを呼ぶだけ。新計算ロジックなし) ----
