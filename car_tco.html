@@ -199,16 +199,16 @@ const DATA_DATE = "2026年8月"; // データ基準日(残価率・税額・自�
 // stability: 手堅さスコア A(手堅い)/B(中位)/C(変動大) + stabilityReason(理由1文)
 // 評価基準(riskFactors): ①残価の需要構造(実需型+/キャラ人気型-/流行型-) ②価格帯(元本300万未満+)
 // ③confidence(low=-) ④残価カーブの床(10年残価20%以上+) ⑤メーカーの経営状況・販売網の安定性
-// (トヨタ/レクサス/ホンダ/スズキ+、ダイハツ/スバル/マツダ/三菱0、日産/輸入/テスラ-)
+// (トヨタ/レクサス/ホンダ/スズキ/ダイハツ+、スバル/マツダ/三菱0、日産/輸入/テスラ-)
 // ※UI上ではスコアに織り込むのみとし、特定メーカーの名指し表現はしない
 const USED_MARGIN = 1.15; // 中古店頭マージン係数(店頭価格 ≒ 買取相場 × 1.15)。ヤリス/N-BOX/アルファードの3年落ち相場で妥当性確認済み
 
 const CARS = [
-  { id: "jimny", segment: "軽",    name: "スズキ ジムニー",            price: 1900000, cc: 660,  weight: 1040, wltc: 16.6, resid: { y3: 92, y5: 82, y7: 68, y10: 45 }, import: false, discount: 100000 /* 車両10万が合格ライン(渋い) */, deliveryTime: "6ヶ月以上", salesRank: "軽11位" /* 納期12ヶ月前後(くるまはっく2026)。6月は軽Top10圏外のため概算 */, gradeAdvice: "XC+定番色(MTも人気)", stability: "B", stabilityReason: "高残価だが納期正常化で相場が動くリスク", note: "残価最強クラス" }, // 実測確認済(2026-08): カーセンサーn=23で理論値誤差+2%。詳細はobservations.md
+  { id: "jimny", segment: "軽",    name: "スズキ ジムニー",            price: 1900000, cc: 660,  weight: 1040, wltc: 16.6, resid: { y3: 92, y5: 82, y7: 68, y10: 45 }, import: false, discount: 100000 /* 車両10万が合格ライン(渋い) */, deliveryTime: "6ヶ月以上", salesRank: "軽11位" /* 納期12ヶ月前後(くるまはっく2026)。6月は軽Top10圏外のため概算 */, gradeAdvice: "XC+定番色(MTも人気)", stability: "B", stabilityReason: "高残価だが需要が一銘柄人気に依存", note: "残価最強クラス" }, // 実測確認済(2026-08): カーセンサーn=23で理論値誤差+2%。詳細はobservations.md
   { id: "nbox", segment: "軽",     name: "ホンダ N-BOX",               price: 1650000, cc: 660,  weight: 950,  wltc: 21.5, resid: { y3: 70, y5: 55, y7: 42, y10: 15 }, import: false, discount: 50000 /* 軽は利益薄く5万事例 */, deliveryTime: "1〜3ヶ月", salesRank: "軽1位" /* 軽首位継続(全軽自協6月) */, gradeAdvice: "カスタム ターボ+白黒", stability: "A", stabilityReason: "実需下支え・元本小で相場が安定", note: "軽の売れ筋" },
   { id: "yaris", segment: "コンパクト",    name: "トヨタ ヤリス",              price: 1800000, cc: 1490, weight: 1000, wltc: 21.6, resid: { y3: 62, y5: 50, y7: 38, y10: 12 }, import: false, discount: 180000 /* 10万円台後半で安定 */, deliveryTime: "1〜3ヶ月", salesRank: "登録車1位" /* 6月12,607台で首位(自販連) */, gradeAdvice: "ハイブリッドZ+白黒", stability: "A", stabilityReason: "実需コンパクトの定番で流通量大・相場安定", note: "ガソリン想定" },
   { id: "fit", segment: "コンパクト",      name: "ホンダ フィット",            price: 2000000, cc: 1496, weight: 1120, wltc: 24.5, resid: { y3: 62, y5: 47, y7: 34, y10: 12 }, import: false, discount: 200000 /* ヤリス/ノート競合で20万超も */, deliveryTime: "1〜3ヶ月", salesRank: "登録車13位" /* 順位は概算 */, gradeAdvice: "ホーム e:HEV+クリスタルブラック", stability: "A", stabilityReason: "実需型で元本小・値動き穏やか", note: "e:HEV" },
-  { id: "corollax", segment: "SUV", name: "トヨタ カローラクロス",      price: 2750000, cc: 1798, weight: 1400, wltc: 26.4, resid: { y3: 80, y5: 68, y7: 50, y10: 22 }, import: false, discount: 150000 /* 改良後も渋め */, deliveryTime: "3〜6ヶ月", salesRank: "登録車4位" /* カローラ名義計上のためシリーズ合算順位(6月) */, gradeAdvice: "ハイブリッドZ+ホワイトパール", stability: "A", stabilityReason: "実需SUVで残価の床が高く需要が広い", note: "HV" },
+  { id: "corollax", segment: "SUV", name: "トヨタ カローラクロス",      price: 3200000 /* HV Z基準に変更(2026-08。従来275万は下位グレード基準) */, cc: 1798, weight: 1400, wltc: 26.4, resid: { y3: 78, y5: 66, y7: 50, y10: 22 }, import: false, discount: 150000 /* 改良後も渋め */, deliveryTime: "3〜6ヶ月", salesRank: "登録車4位" /* カローラ名義計上のためシリーズ合算順位(6月) */, gradeAdvice: "ハイブリッドZ+ホワイトパール", stability: "A", stabilityReason: "実需SUVで残価の床が高く需要が広い", note: "HV" },
   { id: "alphard", segment: "ミニバン",  name: "トヨタ アルファード",        price: 5550000, cc: 2493, weight: 2110, wltc: 17.7, resid: { y3: 75, y5: 66, y7: 55, y10: 32 }, import: false, discount: 300000 /* 人気だが交渉で30万 */, deliveryTime: "6ヶ月以上", salesRank: "登録車7位" /* 受注制限が続く長納期・順位は概算 */, gradeAdvice: "Z+ホワイトパール(上級ほど残価堅い)", stability: "B", stabilityReason: "高残価だが相場高騰の反動リスクと元本の大きさ", note: "残価率高い代表" },
   { id: "lc250", segment: "SUV",    name: "トヨタ ランドクルーザー250", price: 5450000, cc: 2754, weight: 2330, wltc: 11.0, resid: { y3: 85, y5: 75, y7: 62, y10: 40 }, import: false, fuelPrice: 150, discount: 0 /* 転売規制・実質値引きなし */, deliveryTime: "6ヶ月以上", salesRank: "登録車6位" /* 半年〜1年半(グレードで最長2年)・ランクル計6位(intensive911) */, gradeAdvice: "VX以上+白黒", stability: "B", stabilityReason: "残価は最強級だが輸出・転売需要による変動が大きい", note: "ディーゼル(軽油150円/L)" },
   { id: "serena", segment: "ミニバン",   name: "日産 セレナ",                price: 3100000, cc: 1433, weight: 1780, wltc: 19.3, resid: { y3: 62, y5: 48, y7: 34, y10: 12 }, import: false, discount: 300000 /* ミニバン競合で30万級 */, deliveryTime: "1〜3ヶ月", salesRank: "登録車9位" /* 順位は概算 */, gradeAdvice: "ハイウェイスターV+白黒", stability: "B", stabilityReason: "実需型だがメーカーの経営状況・販売網の安定性を含め中位評価", note: "e-POWER" },
@@ -224,7 +224,7 @@ const CARS = [
   { id: "roadster", segment: "セダン・その他", name: "マツダ ロードスター",  price: 2900000, cc: 1496, weight: 1010, wltc: 16.8, resid: { y3: 74, y5: 65, y7: 52, y10: 32 }, import: false, discount: 100000 /* スポーツは渋い */, deliveryTime: "1〜3ヶ月", salesRank: null /* 少量生産・圏外 */, gradeAdvice: "RF/Sスペシャルパッケージ+ソウルレッドも可", stability: "B", stabilityReason: "趣味性の高い需要で個体差が大きい", note: "スポーツで残価堅い" },
   { id: "forester", segment: "SUV",     name: "スバル フォレスター",        price: 3100000, cc: 1795, weight: 1570, wltc: 13.6, resid: { y3: 68, y5: 52, y7: 38, y10: 14 }, import: false, confidence: "low", discount: 250000 /* SUV競合水準 */, deliveryTime: "1〜3ヶ月", salesRank: null /* 圏外 */, gradeAdvice: "スポーツ EX", stability: "B", stabilityReason: "実需SUVだが推定値を含む", note: "1.8ターボ" }, // 5年以降は推定(3年落ち72%のみ相場確認)
   { id: "spacia", segment: "軽",        name: "スズキ スペーシア",          price: 1550000, cc: 658,  weight: 850,  wltc: 23.9, resid: { y3: 65, y5: 50, y7: 35, y10: 12 }, import: false, confidence: "low", discount: 80000 /* 軽相場 */, deliveryTime: "1〜3ヶ月", salesRank: "軽2位" /* 全軽自協6月概算 */, gradeAdvice: "中間グレード+白黒が無難", stability: "A", stabilityReason: "実需型の軽で元本小・値動き小", note: "軽ハイトワゴン" }, // 軽ランキング記事ベースの概算(グレード別実測なし)
-  { id: "tanto", segment: "軽",         name: "ダイハツ タント",            price: 1500000, cc: 658,  weight: 900,  wltc: 21.9, resid: { y3: 60, y5: 46, y7: 32, y10: 10 }, import: false, confidence: "low", discount: 100000 /* 軽相場・競合多 */, deliveryTime: "1〜3ヶ月", salesRank: "軽3位" /* 全軽自協6月概算 */, gradeAdvice: "中間グレード+白黒が無難", stability: "B", stabilityReason: "実需型だがメーカーの経営状況・販売網の安定性を含め中位評価", note: "軽ハイトワゴン" }, // 軽ランキング記事ベースの概算(グレード別実測なし)
+  { id: "tanto", segment: "軽",         name: "ダイハツ タント",            price: 1500000, cc: 658,  weight: 900,  wltc: 21.9, resid: { y3: 60, y5: 46, y7: 32, y10: 10 }, import: false, confidence: "low", discount: 100000 /* 軽相場・競合多 */, deliveryTime: "1〜3ヶ月", salesRank: "軽3位" /* 全軽自協6月概算 */, gradeAdvice: "中間グレード+白黒が無難", stability: "A", stabilityReason: "実需下支えの軽で元本小", note: "軽ハイトワゴン" }, // 軽ランキング記事ベースの概算(グレード別実測なし)
   { id: "delica", segment: "ミニバン",  name: "三菱 デリカD:5",             price: 4050000, cc: 2267, weight: 1930, wltc: 12.6, resid: { y3: 75, y5: 58, y7: 44, y10: 22 }, import: false, confidence: "low", fuelPrice: 150, discount: 300000 /* MC直後は渋いが従来30万級 */, deliveryTime: "3〜6ヶ月", salesRank: null /* 2025年12月MC直後で納期長め・圏外 */, gradeAdvice: "中間グレード+白黒が無難", stability: "B", stabilityReason: "根強い固定需要だがキャラクター性が強く推定値を含む", note: "ディーゼル(軽油150円/L)" }, // 7年以降は推定(3年80%/5年は相場確認)
   { id: "vezel", segment: "SUV",        name: "ホンダ ヴェゼル",            price: 2500000, cc: 1496, weight: 1350, wltc: 25.0, resid: { y3: 66, y5: 52, y7: 38, y10: 14 }, import: false, confidence: "low", discount: 300000 /* キャンペーンで50万事例も平均30万 */, deliveryTime: "1〜3ヶ月", salesRank: "登録車9位" /* 6月7,279台(MotorFan) */, gradeAdvice: "e:HEV Z+白黒", stability: "A", stabilityReason: "実需SUVで元本小・需要が広い", note: "e:HEV" }, // 残価は推定色強め(個別相場未確認。国産SUV平均カーブ)
   { id: "nx", segment: "SUV",           name: "レクサス NX",                price: 5000000, cc: 2487, weight: 1850, wltc: 19.9, resid: { y3: 72, y5: 62, y7: 45, y10: 18 }, import: false, confidence: "low", discount: 0 /* レクサスは原則値引きなし */, deliveryTime: "3〜6ヶ月", salesRank: null /* レクサスは受注生産・単独圏外 */, gradeAdvice: "350h Fスポーツ+白黒", stability: "B", stabilityReason: "残価は堅いが元本が大きい", note: "350h HV" }, // 7年/10年は推定(現行2021年発売。3年72%/5年62%は掲載相場、以降は先代NX相場から外挿)
@@ -242,12 +242,12 @@ const CARS = [
   { id: "vellfire", segment: "ミニバン", name: "トヨタ ヴェルファイア",     price: 6550000, cc: 2493, weight: 2140, wltc: 17.7, resid: { y3: 75, y5: 65, y7: 54, y10: 30 }, import: false, discount: 200000 /* アルファードより流通少 */, deliveryTime: "6ヶ月以上", salesRank: "登録車20位" /* 順位は概算 */, gradeAdvice: "Z Premier+白黒", stability: "B", stabilityReason: "高残価だが相場高騰の反動リスクと元本の大きさ", note: "アルファード兄弟・残価同水準" },
   { id: "impreza", segment: "セダン・その他", name: "スバル インプレッサ",  price: 2600000, cc: 1795, weight: 1480, wltc: 14.0, resid: { y3: 55, y5: 40, y7: 28, y10: 10 }, import: false, confidence: "low", discount: 200000 /* スバル相場 */, deliveryTime: "1〜3ヶ月", salesRank: "登録車25位" /* 順位は概算 */, gradeAdvice: "中間グレード+白黒が無難", stability: "B", stabilityReason: "実需型だが残価の床が低め", note: "1.8ターボ系" }, // 残価は車格別カーブ外挿
   // ---- 2026-08拡充: 軽Top15の未収録分(順位は全軽自協2026年6月・MotorFan。残価は軽リセールまとめ記事+軽カーブ外挿) ----
-  { id: "move", segment: "軽",          name: "ダイハツ ムーヴ",            price: 1450000, cc: 658, weight: 870,  wltc: 23.5, resid: { y3: 60, y5: 45, y7: 32, y10: 10 }, import: false, confidence: "low", discount: 100000 /* 軽相場 */, deliveryTime: "1〜3ヶ月", salesRank: "軽4位" /* 6月9,649台(MotorFan) */, gradeAdvice: "中間グレード+白黒が無難", stability: "B", stabilityReason: "実需型だがメーカーの経営状況・販売網の安定性を含め中位評価", note: "2025フルモデルチェンジ" }, // 残価は軽カーブ外挿
+  { id: "move", segment: "軽",          name: "ダイハツ ムーヴ",            price: 1450000, cc: 658, weight: 870,  wltc: 23.5, resid: { y3: 60, y5: 45, y7: 32, y10: 10 }, import: false, confidence: "low", discount: 100000 /* 軽相場 */, deliveryTime: "1〜3ヶ月", salesRank: "軽4位" /* 6月9,649台(MotorFan) */, gradeAdvice: "中間グレード+白黒が無難", stability: "A", stabilityReason: "実需下支えの軽で元本小", note: "2025フルモデルチェンジ" }, // 残価は軽カーブ外挿
   { id: "roox", segment: "軽",          name: "日産 ルークス",              price: 1750000, cc: 658, weight: 970,  wltc: 20.9, resid: { y3: 62, y5: 47, y7: 33, y10: 11 }, import: false, confidence: "low", discount: 100000 /* 軽相場 */, deliveryTime: "1〜3ヶ月", salesRank: "軽5位" /* 6月8,635台 */, gradeAdvice: "中間グレード+白黒が無難", stability: "B", stabilityReason: "実需型だがメーカーの経営状況・販売網の安定性を含め中位評価", note: "スーパーハイト" }, // 残価は軽カーブ外挿
   { id: "hustler", segment: "軽",       name: "スズキ ハスラー",            price: 1550000, cc: 658, weight: 880,  wltc: 25.0, resid: { y3: 68, y5: 54, y7: 38, y10: 14 }, import: false, confidence: "low", discount: 80000 /* 軽相場・人気で渋め */, deliveryTime: "1〜3ヶ月", salesRank: "軽6位" /* 6月8,026台 */, gradeAdvice: "ハイブリッドX ターボ+2トーン人気", stability: "B", stabilityReason: "人気は高いがキャラクター性の強い需要", note: "軽SUVでリセール堅め" }, // 軽リセールランキング上位常連(MOTA)だが個別実測なし
   { id: "delicamini", segment: "軽",    name: "三菱 デリカミニ",            price: 2000000, cc: 658, weight: 1060, wltc: 20.9, resid: { y3: 68, y5: 52, y7: 38, y10: 14 }, import: false, confidence: "low", discount: 100000 /* 軽相場 */, deliveryTime: "1〜3ヶ月", salesRank: "軽7位" /* 6月5,697台(eK含む)。eK兄弟の代表 */, gradeAdvice: "中間グレード+白黒が無難", stability: "B", stabilityReason: "人気は高いがキャラクター性の強い需要+推定値を含む", note: "eKクロス スペース兄弟" }, // 残価は人気軽SUV系で外挿
   { id: "wagonr", segment: "軽",        name: "スズキ ワゴンR",             price: 1350000, cc: 658, weight: 790,  wltc: 24.4, resid: { y3: 55, y5: 42, y7: 28, y10: 10 }, import: false, confidence: "low", discount: 100000 /* 軽相場 */, deliveryTime: "1〜3ヶ月", salesRank: "軽8位" /* 6月5,107台 */, gradeAdvice: "中間グレード+白黒が無難", stability: "A", stabilityReason: "生活実需の軽で元本小", note: "スマイル含まず" }, // 残価は軽カーブ外挿
-  { id: "mira", segment: "軽",          name: "ダイハツ ミラ イース",       price: 1000000, cc: 658, weight: 670,  wltc: 25.0, resid: { y3: 50, y5: 38, y7: 25, y10: 8 }, import: false, confidence: "low", discount: 80000 /* 軽ベーシック相場 */, deliveryTime: "1〜3ヶ月", salesRank: "軽9位" /* 6月4,995台(ミラ計) */, gradeAdvice: "中間グレード+白黒が無難", stability: "B", stabilityReason: "実需型だがメーカーの経営状況・販売網の安定性を含め中位評価", note: "ベーシック軽" }, // 残価は軽カーブ外挿
+  { id: "mira", segment: "軽",          name: "ダイハツ ミラ イース",       price: 1000000, cc: 658, weight: 670,  wltc: 25.0, resid: { y3: 50, y5: 38, y7: 25, y10: 8 }, import: false, confidence: "low", discount: 80000 /* 軽ベーシック相場 */, deliveryTime: "1〜3ヶ月", salesRank: "軽9位" /* 6月4,995台(ミラ計) */, gradeAdvice: "中間グレード+白黒が無難", stability: "A", stabilityReason: "生活実需の軽で元本最小クラス", note: "ベーシック軽" }, // 残価は軽カーブ外挿
   { id: "alto", segment: "軽",          name: "スズキ アルト",              price: 1100000, cc: 658, weight: 680,  wltc: 27.7, resid: { y3: 52, y5: 40, y7: 27, y10: 9 }, import: false, confidence: "low", discount: 80000 /* 軽ベーシック相場 */, deliveryTime: "1〜3ヶ月", salesRank: "軽10位" /* 6月4,203台 */, gradeAdvice: "中間グレード+白黒が無難", stability: "A", stabilityReason: "生活実需の軽で元本最小クラス", note: "ベーシック軽" }, // 残価は軽カーブ外挿
   { id: "taft", segment: "軽",          name: "ダイハツ タフト",            price: 1500000, cc: 658, weight: 830,  wltc: 21.4, resid: { y3: 62, y5: 48, y7: 34, y10: 12 }, import: false, confidence: "low", discount: 100000 /* 軽相場 */, deliveryTime: "1〜3ヶ月", salesRank: "軽11位" /* 順位は概算 */, gradeAdvice: "中間グレード+白黒が無難", stability: "B", stabilityReason: "キャラクター性のある需要+推定値を含む", note: "軽SUV・ハスラー競合" }, // 残価は軽SUV系で外挿
   { id: "nwgn", segment: "軽",          name: "ホンダ N-WGN",               price: 1400000, cc: 658, weight: 850,  wltc: 23.2, resid: { y3: 55, y5: 42, y7: 29, y10: 10 }, import: false, confidence: "low", discount: 100000 /* 軽相場 */, deliveryTime: "1〜3ヶ月", salesRank: "軽12位" /* 順位は概算 */, gradeAdvice: "中間グレード+白黒が無難", stability: "A", stabilityReason: "実需軽で元本小", note: "N-BOX弟分" }, // 残価は軽カーブ外挿
@@ -534,6 +534,7 @@ if (typeof module !== "undefined") {
     const dt = document.createElement("tr");
     dt.className = "detail-row";
     dt.innerHTML = `<td></td><td colspan="15" style="text-align:left;background:#fafbfd;font-size:12.5px;white-space:normal;line-height:1.8">
+      💰 <b>本体価格 ${man(c.price)}円 → ${state.years}年の真のコスト ${man(r.total)}円</b><br>
       🏷 <b>買うならこのグレード:</b> ${c.gradeAdvice}<br>
       📝 ${c.note || ""} / 残価率(3/5/7/10年): ${c.resid.y3}/${c.resid.y5}/${c.resid.y7}/${c.resid.y10}%${c.confidence === "low" ? "(推定値含む)" : ""} / 値引き相場: ${c.discount ? man(c.discount) + "円" : "ほぼなし"} / 納期: ${c.deliveryTime || "—"}${c.salesRank ? " / " + c.salesRank : ""}
     </td>`;
@@ -661,7 +662,7 @@ if (typeof module !== "undefined") {
           <td>${man(r.acquisition)}円</td><td>${r.salePrice ? man(r.salePrice) + "円" : "—"}</td>
           <td>${r.car.deliveryTime === "6ヶ月以上" ? `<span style="color:#d9480f;background:#fff4e6;padding:2px 6px;border-radius:4px;font-weight:700">⚠ ${r.car.deliveryTime}</span>` : r.car.deliveryTime || "—"}</td>
           <td>${r.car.salesRank || "—"}</td>
-          <td><span title="${r.car.stabilityReason}" style="display:inline-block;min-width:20px;text-align:center;border-radius:4px;font-weight:700;padding:1px 6px;background:${{ A: "#d3f9d8", B: "#f1f3f5", C: "#ffe8cc" }[r.car.stability]};color:${{ A: "#2b8a3e", B: "#495057", C: "#d9480f" }[r.car.stability]}">${r.car.stability}</span></td>
+          <td><span title="${r.car.stabilityReason}" style="display:inline-block;min-width:20px;text-align:center;border-radius:4px;font-weight:700;padding:1px 6px;background:${{ A: "#d3f9d8", B: "#fff3bf", C: "#f1f3f5" }[r.car.stability]};color:${{ A: "#2b8a3e", B: "#997404", C: "#495057" }[r.car.stability]}">${r.car.stability}</span></td>
           <td>${man(b.depreciation)}</td><td>${man(b.tax)}</td><td>${man(b.shaken)}</td>
           <td>${man(b.fuel)}</td><td>${man(b.insurance)}</td><td>${man(b.parking)}</td><td>${man(b.consumables)}</td>
         </tr>`;
@@ -853,6 +854,7 @@ if (typeof module !== "undefined") {
         `<div style="flex:1;min-width:200px;border:2px solid ${i === 0 ? "var(--accent)" : "var(--line)"};border-radius:10px;padding:14px">
           <div style="font-size:13px;color:var(--sub)">${["🥇 1位", "🥈 2位", "🥉 3位"][i]}</div>
           <div style="font-weight:700;margin:4px 0">${r.car.name}${r.car.confidence === "low" ? "※" : ""}</div>
+          <div style="font-size:12px;color:var(--sub)">💰 本体${man(r.car.price)}円 → ${opts.years}年の真のコスト<b>${man(r.total)}円</b></div>
           ${i === 0 ? `<div style="font-size:12px;color:var(--sub)">あなたの条件での実質年コスト</div>` : ""}
           <div style="font-size:${i === 0 ? 22 : 17}px;font-weight:700;color:var(--accent)">${man(r.perYear)}円<span style="font-size:12px;color:var(--sub)">/年</span></div>
           <div style="font-size:12px;color:var(--sub)">取得${man(r.acquisition)}円 / 総額${man(r.total)}円</div>
@@ -864,6 +866,13 @@ if (typeof module !== "undefined") {
       (winner.car.deliveryTime === "6ヶ月以上" && top3[1]
         ? `<p style="background:#fff4e6;border:1px solid #ffc078;border-radius:8px;padding:10px 14px;font-size:13px">⚠ 1位の${winner.car.name}は納期${winner.car.deliveryTime}。すぐ乗りたい場合は<b>${top3[1].car.name}(2位・納期${top3[1].car.deliveryTime || "—"})</b>も検討を。</p>`
         : "") + diffMsg +
+      (() => {
+        // 「一番得」と「一番手堅い」が違う場合は両方提示
+        if (winner.car.stability === "A") return "";
+        const solid = matches.find((r) => r.car.stability === "A");
+        if (!solid) return "";
+        return `<p style="font-size:13px;background:#eef4fd;border:1px solid #bcd4f5;border-radius:8px;padding:10px 14px">💡 最安は<b>${winner.car.name}(年${man(winner.perYear)}円)</b>、手堅さ重視なら<b>${solid.car.name}(年${man(solid.perYear)}円・手堅さA)</b>。</p>`;
+      })() +
       `<div style="margin-top:14px;border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:#f8fafd">
         <div style="font-weight:700;margin-bottom:6px">🛡 残価を守る5箇条(どの車を選んでも効く)</div>
         <ol style="margin:0;padding-left:20px;font-size:13px;line-height:1.9">
@@ -889,7 +898,7 @@ if (typeof module !== "undefined") {
 
   $("footer").textContent =
     `残価率は買取相場ベースの概算です。実際の売却額・保険料・整備費は条件により変動します。※印の車種は残価率に推定値を含みます。` +
-    `取得価格*は新車=値引き相場込みの実質価格、中古購入価格=買取相場×店頭マージン係数による理論値です。実際の店頭価格・値引き額は店舗により異なります。納期は目安であり、グレード・地域・時期により大きく変動します。グレードの記載は残価傾向に基づく一般的な目安です。手堅さは相場の変動リスクに関する定性評価であり保証ではありません。データ基準日: ${DATA_DATE}`;
+    `取得価格*は新車=値引き相場込みの実質価格、中古購入価格=買取相場×店頭マージン係数による理論値です。実際の店頭価格・値引き額は店舗により異なります。納期は目安であり、グレード・地域・時期により大きく変動します。グレードの記載は残価傾向に基づく一般的な目安です。手堅さは相場変動リスクに関する当サイトの定性評価であり、将来の価値を保証するものではありません。データ基準日: ${DATA_DATE}`;
 
   window.addEventListener("resize", render);
   resetSweepDefault();

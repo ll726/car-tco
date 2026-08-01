@@ -248,6 +248,7 @@
     const dt = document.createElement("tr");
     dt.className = "detail-row";
     dt.innerHTML = `<td></td><td colspan="15" style="text-align:left;background:#fafbfd;font-size:12.5px;white-space:normal;line-height:1.8">
+      💰 <b>本体価格 ${man(c.price)}円 → ${state.years}年の真のコスト ${man(r.total)}円</b><br>
       🏷 <b>買うならこのグレード:</b> ${c.gradeAdvice}<br>
       📝 ${c.note || ""} / 残価率(3/5/7/10年): ${c.resid.y3}/${c.resid.y5}/${c.resid.y7}/${c.resid.y10}%${c.confidence === "low" ? "(推定値含む)" : ""} / 値引き相場: ${c.discount ? man(c.discount) + "円" : "ほぼなし"} / 納期: ${c.deliveryTime || "—"}${c.salesRank ? " / " + c.salesRank : ""}
     </td>`;
@@ -375,7 +376,7 @@
           <td>${man(r.acquisition)}円</td><td>${r.salePrice ? man(r.salePrice) + "円" : "—"}</td>
           <td>${r.car.deliveryTime === "6ヶ月以上" ? `<span style="color:#d9480f;background:#fff4e6;padding:2px 6px;border-radius:4px;font-weight:700">⚠ ${r.car.deliveryTime}</span>` : r.car.deliveryTime || "—"}</td>
           <td>${r.car.salesRank || "—"}</td>
-          <td><span title="${r.car.stabilityReason}" style="display:inline-block;min-width:20px;text-align:center;border-radius:4px;font-weight:700;padding:1px 6px;background:${{ A: "#d3f9d8", B: "#f1f3f5", C: "#ffe8cc" }[r.car.stability]};color:${{ A: "#2b8a3e", B: "#495057", C: "#d9480f" }[r.car.stability]}">${r.car.stability}</span></td>
+          <td><span title="${r.car.stabilityReason}" style="display:inline-block;min-width:20px;text-align:center;border-radius:4px;font-weight:700;padding:1px 6px;background:${{ A: "#d3f9d8", B: "#fff3bf", C: "#f1f3f5" }[r.car.stability]};color:${{ A: "#2b8a3e", B: "#997404", C: "#495057" }[r.car.stability]}">${r.car.stability}</span></td>
           <td>${man(b.depreciation)}</td><td>${man(b.tax)}</td><td>${man(b.shaken)}</td>
           <td>${man(b.fuel)}</td><td>${man(b.insurance)}</td><td>${man(b.parking)}</td><td>${man(b.consumables)}</td>
         </tr>`;
@@ -567,6 +568,7 @@
         `<div style="flex:1;min-width:200px;border:2px solid ${i === 0 ? "var(--accent)" : "var(--line)"};border-radius:10px;padding:14px">
           <div style="font-size:13px;color:var(--sub)">${["🥇 1位", "🥈 2位", "🥉 3位"][i]}</div>
           <div style="font-weight:700;margin:4px 0">${r.car.name}${r.car.confidence === "low" ? "※" : ""}</div>
+          <div style="font-size:12px;color:var(--sub)">💰 本体${man(r.car.price)}円 → ${opts.years}年の真のコスト<b>${man(r.total)}円</b></div>
           ${i === 0 ? `<div style="font-size:12px;color:var(--sub)">あなたの条件での実質年コスト</div>` : ""}
           <div style="font-size:${i === 0 ? 22 : 17}px;font-weight:700;color:var(--accent)">${man(r.perYear)}円<span style="font-size:12px;color:var(--sub)">/年</span></div>
           <div style="font-size:12px;color:var(--sub)">取得${man(r.acquisition)}円 / 総額${man(r.total)}円</div>
@@ -578,6 +580,13 @@
       (winner.car.deliveryTime === "6ヶ月以上" && top3[1]
         ? `<p style="background:#fff4e6;border:1px solid #ffc078;border-radius:8px;padding:10px 14px;font-size:13px">⚠ 1位の${winner.car.name}は納期${winner.car.deliveryTime}。すぐ乗りたい場合は<b>${top3[1].car.name}(2位・納期${top3[1].car.deliveryTime || "—"})</b>も検討を。</p>`
         : "") + diffMsg +
+      (() => {
+        // 「一番得」と「一番手堅い」が違う場合は両方提示
+        if (winner.car.stability === "A") return "";
+        const solid = matches.find((r) => r.car.stability === "A");
+        if (!solid) return "";
+        return `<p style="font-size:13px;background:#eef4fd;border:1px solid #bcd4f5;border-radius:8px;padding:10px 14px">💡 最安は<b>${winner.car.name}(年${man(winner.perYear)}円)</b>、手堅さ重視なら<b>${solid.car.name}(年${man(solid.perYear)}円・手堅さA)</b>。</p>`;
+      })() +
       `<div style="margin-top:14px;border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:#f8fafd">
         <div style="font-weight:700;margin-bottom:6px">🛡 残価を守る5箇条(どの車を選んでも効く)</div>
         <ol style="margin:0;padding-left:20px;font-size:13px;line-height:1.9">
@@ -603,7 +612,7 @@
 
   $("footer").textContent =
     `残価率は買取相場ベースの概算です。実際の売却額・保険料・整備費は条件により変動します。※印の車種は残価率に推定値を含みます。` +
-    `取得価格*は新車=値引き相場込みの実質価格、中古購入価格=買取相場×店頭マージン係数による理論値です。実際の店頭価格・値引き額は店舗により異なります。納期は目安であり、グレード・地域・時期により大きく変動します。グレードの記載は残価傾向に基づく一般的な目安です。手堅さは相場の変動リスクに関する定性評価であり保証ではありません。データ基準日: ${DATA_DATE}`;
+    `取得価格*は新車=値引き相場込みの実質価格、中古購入価格=買取相場×店頭マージン係数による理論値です。実際の店頭価格・値引き額は店舗により異なります。納期は目安であり、グレード・地域・時期により大きく変動します。グレードの記載は残価傾向に基づく一般的な目安です。手堅さは相場変動リスクに関する当サイトの定性評価であり、将来の価値を保証するものではありません。データ基準日: ${DATA_DATE}`;
 
   window.addEventListener("resize", render);
   resetSweepDefault();
