@@ -232,6 +232,27 @@
   $("in-park").addEventListener("input", (e) => { state.parkingMonthly = +e.target.value || 0; render(); });
   $("in-ins").addEventListener("input", (e) => { state.insuranceAnnual = +e.target.value || 0; render(); });
 
+  let tableResults = []; // 直近描画した表の行データ(詳細行展開用)
+
+  // 車種名クリックで詳細行を展開/収納
+  $("tbody").addEventListener("click", (e) => {
+    const cell = e.target.closest("td.carname");
+    if (!cell) return;
+    const tr = cell.parentElement;
+    const next = tr.nextElementSibling;
+    if (next && next.classList.contains("detail-row")) { next.remove(); return; }
+    const r = tableResults.find((x) => x.car.id === cell.dataset.id);
+    if (!r) return;
+    const c = r.car;
+    const dt = document.createElement("tr");
+    dt.className = "detail-row";
+    dt.innerHTML = `<td></td><td colspan="14" style="text-align:left;background:#fafbfd;font-size:12.5px;white-space:normal;line-height:1.8">
+      🏷 <b>買うならこのグレード:</b> ${c.gradeAdvice}<br>
+      📝 ${c.note || ""} / 残価率(3/5/7/10年): ${c.resid.y3}/${c.resid.y5}/${c.resid.y7}/${c.resid.y10}%${c.confidence === "low" ? "(推定値含む)" : ""} / 値引き相場: ${c.discount ? man(c.discount) + "円" : "ほぼなし"} / 納期: ${c.deliveryTime || "—"}${c.salesRank ? " / " + c.salesRank : ""}
+    </td>`;
+    tr.after(dt);
+  });
+
   const KEYS = ["depreciation", "tax", "shaken", "fuel", "insurance", "parking", "consumables"];
   const COLORS = ["--c-dep", "--c-tax", "--c-shaken", "--c-fuel", "--c-ins", "--c-park", "--c-cons"].map((v) =>
     getComputedStyle(document.documentElement).getPropertyValue(v).trim()
@@ -343,11 +364,12 @@
 
   function renderTable(results) {
     if (state.search) results = results.filter((r) => r.car.name.includes(state.search));
+    tableResults = results;
     $("tbody").innerHTML = results
       .map((r, i) => {
         const b = r.breakdown;
         return `<tr>
-          <td class="rank">${i + 1}</td><td>${r.car.name}${r.car.confidence === "low" ? "※" : ""}</td>
+          <td class="rank">${i + 1}</td><td class="carname" data-id="${r.car.id}" style="cursor:pointer" title="クリックで詳細">${r.car.name}${r.car.confidence === "low" ? "※" : ""} <span style="color:var(--sub);font-size:11px">▾</span></td>
           <td class="peryear">${man(r.perYear)}円</td><td>${man(r.total)}円</td>
           <td>${man(r.acquisition)}円</td><td>${r.salePrice ? man(r.salePrice) + "円" : "—"}</td>
           <td>${r.car.deliveryTime === "6ヶ月以上" ? `<span style="color:#d9480f;background:#fff4e6;padding:2px 6px;border-radius:4px;font-weight:700">⚠ ${r.car.deliveryTime}</span>` : r.car.deliveryTime || "—"}</td>
@@ -547,6 +569,7 @@
           <div style="font-size:${i === 0 ? 22 : 17}px;font-weight:700;color:var(--accent)">${man(r.perYear)}円<span style="font-size:12px;color:var(--sub)">/年</span></div>
           <div style="font-size:12px;color:var(--sub)">取得${man(r.acquisition)}円 / 総額${man(r.total)}円</div>
           <div style="font-size:12px;margin-top:4px;${r.car.deliveryTime === "6ヶ月以上" ? "color:#d9480f;font-weight:700" : "color:var(--sub)"}">納期: ${r.car.deliveryTime || "—"}${r.car.salesRank ? ` / ${r.car.salesRank}` : ""}</div>
+          <div style="font-size:12px;color:var(--sub);margin-top:2px">🏷 ${r.car.gradeAdvice}</div>
         </div>`
       ).join("") + `</div>` +
       (winner.car.deliveryTime === "6ヶ月以上" && top3[1]
@@ -567,7 +590,7 @@
 
   $("footer").textContent =
     `残価率は買取相場ベースの概算です。実際の売却額・保険料・整備費は条件により変動します。※印の車種は残価率に推定値を含みます。` +
-    `取得価格*は新車=値引き相場込みの実質価格、中古購入価格=買取相場×店頭マージン係数による理論値です。実際の店頭価格・値引き額は店舗により異なります。納期は目安であり、グレード・地域・時期により大きく変動します。データ基準日: ${DATA_DATE}`;
+    `取得価格*は新車=値引き相場込みの実質価格、中古購入価格=買取相場×店頭マージン係数による理論値です。実際の店頭価格・値引き額は店舗により異なります。納期は目安であり、グレード・地域・時期により大きく変動します。グレードの記載は残価傾向に基づく一般的な目安です。データ基準日: ${DATA_DATE}`;
 
   window.addEventListener("resize", render);
   resetSweepDefault();
