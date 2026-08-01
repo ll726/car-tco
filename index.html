@@ -88,6 +88,17 @@
         <button data-v="1">中古3年落ちで購入</button>
       </div>
     </div>
+    <div class="toggles" style="margin-top:10px">
+      <div class="seg" id="seg-filter">
+        <button data-v="all" class="on">全車種</button>
+        <button data-v="軽">軽</button>
+        <button data-v="コンパクト">コンパクト</button>
+        <button data-v="ミニバン">ミニバン</button>
+        <button data-v="SUV">SUV</button>
+        <button data-v="セダン・その他">セダン・その他</button>
+        <button data-v="輸入・EV">輸入・EV</button>
+      </div>
+    </div>
   </section>
 
   <div id="highlight"></div>
@@ -128,7 +139,17 @@
 <script>
 (function () {
   const $ = (id) => document.getElementById(id);
-  const state = { years: 5, annualKm: 10000, fuelPrice: 170, parkingMonthly: 0, insuranceAnnual: 60000, sell: true, used: false };
+  const state = { years: 5, annualKm: 10000, fuelPrice: 170, parkingMonthly: 0, insuranceAnnual: 60000, sell: true, used: false, filter: "all" };
+
+  const filteredCars = () => (state.filter === "all" ? CARS : CARS.filter((c) => c.segment === state.filter));
+
+  $("seg-filter").addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    [...$("seg-filter").children].forEach((b) => b.classList.toggle("on", b === btn));
+    state.filter = btn.dataset.v;
+    render();
+  });
 
   const man = (n) => (n / 10000).toLocaleString("ja-JP", { maximumFractionDigits: 0 }) + "万";
 
@@ -158,15 +179,18 @@
   );
 
   function render() {
-    const results = calcAll(CARS, state);
+    const results = calcAll(filteredCars(), state);
     renderTable(results);
     renderHighlight(results);
     renderChart(results);
     renderSweep();
   }
 
-  // 車種ごとの識別色(折れ線用)
-  const CAR_COLORS = ["#4c6ef5", "#e8590c", "#37b24d", "#f59f00", "#9c36b5", "#1098ad", "#e64980", "#5c940d", "#495057", "#845ef7"];
+  // 車種ごとの識別色(折れ線用)。全車種数に対応するためHSLで機械生成し、idに固定で割り当て
+  const CAR_COLORS = {};
+  CARS.forEach((c, i) => {
+    CAR_COLORS[c.id] = `hsl(${Math.round((i * 360) / CARS.length)}, 65%, ${i % 2 ? 42 : 52}%)`;
+  });
   const hiddenCars = new Set(); // 凡例クリックで非表示にした車種id
 
   $("sweep-legend").addEventListener("click", (e) => {
@@ -181,8 +205,8 @@
   function renderSweep() {
     const YEARS = [];
     for (let y = 1; y <= 15; y++) YEARS.push(y);
-    // 「売り時」を見るビューなので売却前提。新車/中古トグルは反映
-    const series = CARS.map((car) => ({
+    // 「売り時」を見るビューなので売却前提。新車/中古トグル・セグメントフィルタは反映
+    const series = filteredCars().map((car) => ({
       car,
       pts: YEARS.map((y) => calcTCO(car, { ...state, years: y, sell: true }).perYear),
     }));
@@ -225,28 +249,28 @@
     YEARS.forEach((yr, i) => ctx.fillText(yr + "年", xAt(i), H - padB + 6));
 
     // 折れ線(非表示車種はスキップ)
-    series.forEach((s, si) => {
+    series.forEach((s) => {
       if (hiddenCars.has(s.car.id)) return;
-      ctx.strokeStyle = CAR_COLORS[si];
+      ctx.strokeStyle = CAR_COLORS[s.car.id];
       ctx.lineWidth = s.car.id === "jimny" ? 2 : 1.5;
       ctx.beginPath();
       s.pts.forEach((v, i) => (i ? ctx.lineTo(xAt(i), yAt(v)) : ctx.moveTo(xAt(i), yAt(v))));
       ctx.stroke();
     });
     // 最小コスト年マーカー(線の上に描く)
-    series.forEach((s, si) => {
+    series.forEach((s) => {
       if (hiddenCars.has(s.car.id)) return;
       const x = xAt(s.minIdx), y = yAt(s.pts[s.minIdx]);
-      ctx.fillStyle = CAR_COLORS[si];
+      ctx.fillStyle = CAR_COLORS[s.car.id];
       ctx.beginPath(); ctx.arc(x, y, 4.5, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.5; ctx.stroke();
     });
 
     // 凡例(最小コスト年つき・クリックで表示切替)
     $("sweep-legend").innerHTML = series
-      .map((s, si) => {
+      .map((s) => {
         const off = hiddenCars.has(s.car.id);
-        return `<span data-id="${s.car.id}" style="--sw:${CAR_COLORS[si]};cursor:pointer;${off ? "opacity:.35;text-decoration:line-through;" : ""}">${s.car.name}(${YEARS[s.minIdx]}年目 ${man(s.pts[s.minIdx])}円/年)</span>`;
+        return `<span data-id="${s.car.id}" style="--sw:${CAR_COLORS[s.car.id]};cursor:pointer;${off ? "opacity:.35;text-decoration:line-through;" : ""}">${s.car.name}(${YEARS[s.minIdx]}年目 ${man(s.pts[s.minIdx])}円/年)</span>`;
       })
       .join("");
   }

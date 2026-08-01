@@ -50,6 +50,23 @@ console.assert(JSON.stringify(shakenYears(5, true)) === "[2,4]", "中古5年=2�
   console.assert(calcTCO(yaris, { ...base, fuelPrice: 170 }).breakdown.fuel !== calcTCO(yaris, { ...base, fuelPrice: 200 }).breakdown.fuel, "通常車は単価変更が反映");
 }
 
+// EV(テスラ モデル3)の計算
+{
+  const ev = CARS.find((c) => c.id === "model3");
+  const base = { years: 5, annualKm: 10000, fuelPrice: 170, parkingMonthly: 0, insuranceAnnual: 60000, sell: true, used: false };
+  const r = calcTCO(ev, base);
+  // 燃料費 = 年1万km ÷ 電費7.0km/kWh × 31円/kWh × 5年(WLTC補正0.85は適用しない)
+  const expectedElec = Math.round((10000 / 7.0) * 31 * 5);
+  console.assert(r.breakdown.fuel === expectedElec, "EVの燃料費は電費×電気単価で計算");
+  // ガソリン単価を変えても電気代は不変
+  console.assert(calcTCO(ev, { ...base, fuelPrice: 250 }).breakdown.fuel === expectedElec, "EVはガソリン単価に依存しない");
+  // 自動車税はEV区分(1,000cc以下扱い=25,000円/年)
+  console.assert(r.breakdown.tax === 25000 * 5, "EVの自動車税は25,000円/年");
+  console.assert(autoTax(0, true) === 25000, "autoTax EV区分");
+  // cc:0でも軽扱いにならない(重量税が軽の6,600円/2年ベースでない)
+  console.assert(weightTaxPerShaken(ev.weight, false, false) === Math.ceil(1760 / 500) * 4100 * 2, "EVの重量税は普通車区分");
+}
+
 console.log("assert完了(エラー表示が無ければOK)");
 
 // --- 標準条件: 5年・年1万km・売却あり・新車 ---

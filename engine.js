@@ -3,12 +3,14 @@
 const DEFAULT_SETTINGS = {
   fuelCorrection: 0.85,      // 実燃費 = WLTC × 0.85
   importMaintFactor: 1.5,    // 輸入車の整備費係数
+  elecPricePerKwh: 31,       // EVの電気単価(円/kWh)
 };
 
 // ---- 税金・法定費用 --------------------------------------------------------
 
-// 自動車税(年額・2019年10月以降の新規登録車の税率)
-function autoTax(cc) {
+// 自動車税(年額・2019年10月以降の新規登録車の税率)。EVは1,000cc以下区分扱い(25,000円)
+function autoTax(cc, isEv) {
+  if (isEv) return 25000;
   if (cc <= 660) return 10800;             // 軽自動車税
   if (cc <= 1000) return 25000;
   if (cc <= 1500) return 30500;
@@ -82,7 +84,7 @@ function shakenYears(years, isUsed) {
 function calcTCO(car, opts, settings = DEFAULT_SETTINGS) {
   const { years, annualKm, parkingMonthly, insuranceAnnual, sell, used } = opts;
   const fuelPrice = car.fuelPrice != null ? car.fuelPrice : opts.fuelPrice;
-  const isKei = car.cc <= 660;
+  const isKei = !car.ev && car.cc <= 660; // EVはcc:0でも軽扱いにしない
   const maintFactor = car.import ? settings.importMaintFactor : 1;
 
   // 取得価格(中古3年落ち = 新車価格 × 3年残価率)
@@ -99,7 +101,7 @@ function calcTCO(car, opts, settings = DEFAULT_SETTINGS) {
   }
 
   // 自動車税
-  const taxTotal = autoTax(car.cc) * years;
+  const taxTotal = autoTax(car.cc, !!car.ev) * years;
 
   // 車検(重量税+自賠責は購入時の初回分も payment としてカウント)
   const shakens = shakenYears(years, used);
@@ -113,9 +115,14 @@ function calcTCO(car, opts, settings = DEFAULT_SETTINGS) {
   const maintBase = isKei ? 40000 : car.import ? 90000 : 60000;
   const shakenMaint = shakens.length * maintBase * maintFactor;
 
-  // 燃料費
-  const realFuelEcon = car.wltc * settings.fuelCorrection;
-  const fuelTotal = (annualKm / realFuelEcon) * fuelPrice * years;
+  // 燃料費(EVは電費×電気単価、それ以外はWLTC×補正×燃料単価)
+  let fuelTotal;
+  if (car.ev) {
+    fuelTotal = (annualKm / car.kmPerKwh) * settings.elecPricePerKwh * years;
+  } else {
+    const realFuelEcon = car.wltc * settings.fuelCorrection;
+    fuelTotal = (annualKm / realFuelEcon) * fuelPrice * years;
+  }
 
   // 任意保険・駐車場
   const insuranceTotal = insuranceAnnual * years;

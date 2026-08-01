@@ -88,6 +88,17 @@
         <button data-v="1">中古3年落ちで購入</button>
       </div>
     </div>
+    <div class="toggles" style="margin-top:10px">
+      <div class="seg" id="seg-filter">
+        <button data-v="all" class="on">全車種</button>
+        <button data-v="軽">軽</button>
+        <button data-v="コンパクト">コンパクト</button>
+        <button data-v="ミニバン">ミニバン</button>
+        <button data-v="SUV">SUV</button>
+        <button data-v="セダン・その他">セダン・その他</button>
+        <button data-v="輸入・EV">輸入・EV</button>
+      </div>
+    </div>
   </section>
 
   <div id="highlight"></div>
@@ -125,21 +136,38 @@
 
 <script>
 // 車種データ(残価率は2026-08時点のWeb掲載相場を参考に更新済み。買取相場ベースの概算)
+// segment: 軽 / コンパクト / ミニバン / SUV / セダン・その他 / 輸入・EV
+// EV車は ev: true + kmPerKwh(電費)。燃料費は 電気単価31円/kWh で計算(engine.js)
 // price: 新車価格(円) / cc: 排気量 / weight: 車重kg / wltc: km/L
 // resid: 残価率% {y3, y5, y7} / import: 輸入車 / fuelPrice: 燃料単価上書き(円/L)
 const DATA_DATE = "2026年8月"; // データ基準日(残価率・税額・自賠責料率の確認時点)
 
 const CARS = [
-  { id: "jimny",    name: "スズキ ジムニー",            price: 1900000, cc: 660,  weight: 1040, wltc: 16.6, resid: { y3: 92, y5: 82, y7: 68, y10: 45 }, import: false, note: "残価最強クラス" },
-  { id: "nbox",     name: "ホンダ N-BOX",               price: 1650000, cc: 660,  weight: 950,  wltc: 21.5, resid: { y3: 70, y5: 55, y7: 42, y10: 15 }, import: false, note: "軽の売れ筋" },
-  { id: "yaris",    name: "トヨタ ヤリス",              price: 1800000, cc: 1490, weight: 1000, wltc: 21.6, resid: { y3: 62, y5: 50, y7: 38, y10: 12 }, import: false, note: "ガソリン想定" },
-  { id: "fit",      name: "ホンダ フィット",            price: 2000000, cc: 1496, weight: 1120, wltc: 24.5, resid: { y3: 62, y5: 47, y7: 34, y10: 12 }, import: false, note: "e:HEV" },
-  { id: "corollax", name: "トヨタ カローラクロス",      price: 2750000, cc: 1798, weight: 1400, wltc: 26.4, resid: { y3: 80, y5: 68, y7: 50, y10: 22 }, import: false, note: "HV" },
-  { id: "alphard",  name: "トヨタ アルファード",        price: 5550000, cc: 2493, weight: 2110, wltc: 17.7, resid: { y3: 75, y5: 66, y7: 55, y10: 32 }, import: false, note: "残価率高い代表" },
-  { id: "lc250",    name: "トヨタ ランドクルーザー250", price: 5450000, cc: 2754, weight: 2330, wltc: 11.0, resid: { y3: 85, y5: 75, y7: 62, y10: 40 }, import: false, fuelPrice: 150, note: "ディーゼル(軽油150円/L)" },
-  { id: "serena",   name: "日産 セレナ",                price: 3100000, cc: 1433, weight: 1780, wltc: 19.3, resid: { y3: 62, y5: 48, y7: 34, y10: 12 }, import: false, note: "e-POWER" },
-  { id: "cclass",   name: "メルセデス・ベンツ Cクラス", price: 6900000, cc: 1494, weight: 1690, wltc: 16.2, resid: { y3: 50, y5: 35, y7: 22, y10: 8 }, import: true,  note: "値落ち大の代表" },
-  { id: "bmw3",     name: "BMW 3シリーズ",              price: 6300000, cc: 1998, weight: 1640, wltc: 13.5, resid: { y3: 48, y5: 33, y7: 20, y10: 8 }, import: true,  note: "同上" },
+  { id: "jimny", segment: "軽",    name: "スズキ ジムニー",            price: 1900000, cc: 660,  weight: 1040, wltc: 16.6, resid: { y3: 92, y5: 82, y7: 68, y10: 45 }, import: false, note: "残価最強クラス" },
+  { id: "nbox", segment: "軽",     name: "ホンダ N-BOX",               price: 1650000, cc: 660,  weight: 950,  wltc: 21.5, resid: { y3: 70, y5: 55, y7: 42, y10: 15 }, import: false, note: "軽の売れ筋" },
+  { id: "yaris", segment: "コンパクト",    name: "トヨタ ヤリス",              price: 1800000, cc: 1490, weight: 1000, wltc: 21.6, resid: { y3: 62, y5: 50, y7: 38, y10: 12 }, import: false, note: "ガソリン想定" },
+  { id: "fit", segment: "コンパクト",      name: "ホンダ フィット",            price: 2000000, cc: 1496, weight: 1120, wltc: 24.5, resid: { y3: 62, y5: 47, y7: 34, y10: 12 }, import: false, note: "e:HEV" },
+  { id: "corollax", segment: "SUV", name: "トヨタ カローラクロス",      price: 2750000, cc: 1798, weight: 1400, wltc: 26.4, resid: { y3: 80, y5: 68, y7: 50, y10: 22 }, import: false, note: "HV" },
+  { id: "alphard", segment: "ミニバン",  name: "トヨタ アルファード",        price: 5550000, cc: 2493, weight: 2110, wltc: 17.7, resid: { y3: 75, y5: 66, y7: 55, y10: 32 }, import: false, note: "残価率高い代表" },
+  { id: "lc250", segment: "SUV",    name: "トヨタ ランドクルーザー250", price: 5450000, cc: 2754, weight: 2330, wltc: 11.0, resid: { y3: 85, y5: 75, y7: 62, y10: 40 }, import: false, fuelPrice: 150, note: "ディーゼル(軽油150円/L)" },
+  { id: "serena", segment: "ミニバン",   name: "日産 セレナ",                price: 3100000, cc: 1433, weight: 1780, wltc: 19.3, resid: { y3: 62, y5: 48, y7: 34, y10: 12 }, import: false, note: "e-POWER" },
+  { id: "cclass", segment: "輸入・EV",   name: "メルセデス・ベンツ Cクラス", price: 6900000, cc: 1494, weight: 1690, wltc: 16.2, resid: { y3: 50, y5: 35, y7: 22, y10: 8 }, import: true,  note: "値落ち大の代表" },
+  { id: "bmw3", segment: "輸入・EV",     name: "BMW 3シリーズ",              price: 6300000, cc: 1998, weight: 1640, wltc: 13.5, resid: { y3: 48, y5: 33, y7: 20, y10: 8 }, import: true,  note: "同上" },
+  { id: "prius", segment: "セダン・その他", name: "トヨタ プリウス",         price: 2750000, cc: 1986, weight: 1360, wltc: 32.6, resid: { y3: 64, y5: 50, y7: 38, y10: 15 }, import: false, note: "2.0 HV" },
+  { id: "sienta", segment: "ミニバン",   name: "トヨタ シエンタ",            price: 2300000, cc: 1490, weight: 1330, wltc: 28.2, resid: { y3: 65, y5: 50, y7: 36, y10: 13 }, import: false, note: "HV" },
+  { id: "harrier", segment: "SUV",      name: "トヨタ ハリアー",            price: 3500000, cc: 2487, weight: 1680, wltc: 22.3, resid: { y3: 78, y5: 58, y7: 47, y10: 18 }, import: false, note: "HV" },
+  { id: "voxy", segment: "ミニバン",    name: "トヨタ ヴォクシー",          price: 3090000, cc: 1797, weight: 1670, wltc: 23.0, resid: { y3: 72, y5: 58, y7: 48, y10: 18 }, import: false, note: "HV" },
+  { id: "crownsp", segment: "セダン・その他", name: "トヨタ クラウンスポーツ", price: 5900000, cc: 2487, weight: 1770, wltc: 21.3, resid: { y3: 62, y5: 46, y7: 33, y10: 12 }, import: false, note: "HV" },
+  { id: "note", segment: "コンパクト",  name: "日産 ノート",                price: 2300000, cc: 1198, weight: 1220, wltc: 28.4, resid: { y3: 55, y5: 42, y7: 28, y10: 10 }, import: false, note: "e-POWER" },
+  { id: "cx5", segment: "SUV",          name: "マツダ CX-5",                price: 2900000, cc: 2188, weight: 1680, wltc: 17.4, resid: { y3: 60, y5: 44, y7: 30, y10: 11 }, import: false, fuelPrice: 150, note: "ディーゼル(軽油150円/L)" },
+  { id: "roadster", segment: "セダン・その他", name: "マツダ ロードスター",  price: 2900000, cc: 1496, weight: 1010, wltc: 16.8, resid: { y3: 74, y5: 65, y7: 52, y10: 32 }, import: false, note: "スポーツで残価堅い" },
+  { id: "forester", segment: "SUV",     name: "スバル フォレスター",        price: 3100000, cc: 1795, weight: 1570, wltc: 13.6, resid: { y3: 68, y5: 52, y7: 38, y10: 14 }, import: false, note: "1.8ターボ" },
+  { id: "spacia", segment: "軽",        name: "スズキ スペーシア",          price: 1550000, cc: 658,  weight: 850,  wltc: 23.9, resid: { y3: 65, y5: 50, y7: 35, y10: 12 }, import: false, note: "軽ハイトワゴン" },
+  { id: "tanto", segment: "軽",         name: "ダイハツ タント",            price: 1500000, cc: 658,  weight: 900,  wltc: 21.9, resid: { y3: 60, y5: 46, y7: 32, y10: 10 }, import: false, note: "軽ハイトワゴン" },
+  { id: "delica", segment: "ミニバン",  name: "三菱 デリカD:5",             price: 4050000, cc: 2267, weight: 1930, wltc: 12.6, resid: { y3: 75, y5: 58, y7: 44, y10: 22 }, import: false, fuelPrice: 150, note: "ディーゼル(軽油150円/L)" },
+  { id: "vezel", segment: "SUV",        name: "ホンダ ヴェゼル",            price: 2500000, cc: 1496, weight: 1350, wltc: 25.0, resid: { y3: 66, y5: 52, y7: 38, y10: 14 }, import: false, note: "e:HEV" },
+  { id: "nx", segment: "SUV",           name: "レクサス NX",                price: 5000000, cc: 2487, weight: 1850, wltc: 19.9, resid: { y3: 72, y5: 62, y7: 45, y10: 18 }, import: false, note: "350h HV" },
+  { id: "model3", segment: "輸入・EV",  name: "テスラ モデル3",             price: 5300000, cc: 0, weight: 1760, wltc: 0, ev: true, kmPerKwh: 7.0, resid: { y3: 48, y5: 33, y7: 20, y10: 8 }, import: true, note: "EV(電費7.0km/kWh・電気31円/kWh)" },
 ];
 
 if (typeof module !== "undefined") module.exports = { CARS, DATA_DATE };
@@ -150,12 +178,14 @@ if (typeof module !== "undefined") module.exports = { CARS, DATA_DATE };
 const DEFAULT_SETTINGS = {
   fuelCorrection: 0.85,      // 実燃費 = WLTC × 0.85
   importMaintFactor: 1.5,    // 輸入車の整備費係数
+  elecPricePerKwh: 31,       // EVの電気単価(円/kWh)
 };
 
 // ---- 税金・法定費用 --------------------------------------------------------
 
-// 自動車税(年額・2019年10月以降の新規登録車の税率)
-function autoTax(cc) {
+// 自動車税(年額・2019年10月以降の新規登録車の税率)。EVは1,000cc以下区分扱い(25,000円)
+function autoTax(cc, isEv) {
+  if (isEv) return 25000;
   if (cc <= 660) return 10800;             // 軽自動車税
   if (cc <= 1000) return 25000;
   if (cc <= 1500) return 30500;
@@ -229,7 +259,7 @@ function shakenYears(years, isUsed) {
 function calcTCO(car, opts, settings = DEFAULT_SETTINGS) {
   const { years, annualKm, parkingMonthly, insuranceAnnual, sell, used } = opts;
   const fuelPrice = car.fuelPrice != null ? car.fuelPrice : opts.fuelPrice;
-  const isKei = car.cc <= 660;
+  const isKei = !car.ev && car.cc <= 660; // EVはcc:0でも軽扱いにしない
   const maintFactor = car.import ? settings.importMaintFactor : 1;
 
   // 取得価格(中古3年落ち = 新車価格 × 3年残価率)
@@ -246,7 +276,7 @@ function calcTCO(car, opts, settings = DEFAULT_SETTINGS) {
   }
 
   // 自動車税
-  const taxTotal = autoTax(car.cc) * years;
+  const taxTotal = autoTax(car.cc, !!car.ev) * years;
 
   // 車検(重量税+自賠責は購入時の初回分も payment としてカウント)
   const shakens = shakenYears(years, used);
@@ -260,9 +290,14 @@ function calcTCO(car, opts, settings = DEFAULT_SETTINGS) {
   const maintBase = isKei ? 40000 : car.import ? 90000 : 60000;
   const shakenMaint = shakens.length * maintBase * maintFactor;
 
-  // 燃料費
-  const realFuelEcon = car.wltc * settings.fuelCorrection;
-  const fuelTotal = (annualKm / realFuelEcon) * fuelPrice * years;
+  // 燃料費(EVは電費×電気単価、それ以外はWLTC×補正×燃料単価)
+  let fuelTotal;
+  if (car.ev) {
+    fuelTotal = (annualKm / car.kmPerKwh) * settings.elecPricePerKwh * years;
+  } else {
+    const realFuelEcon = car.wltc * settings.fuelCorrection;
+    fuelTotal = (annualKm / realFuelEcon) * fuelPrice * years;
+  }
 
   // 任意保険・駐車場
   const insuranceTotal = insuranceAnnual * years;
@@ -309,7 +344,17 @@ if (typeof module !== "undefined") {
 <script>
 (function () {
   const $ = (id) => document.getElementById(id);
-  const state = { years: 5, annualKm: 10000, fuelPrice: 170, parkingMonthly: 0, insuranceAnnual: 60000, sell: true, used: false };
+  const state = { years: 5, annualKm: 10000, fuelPrice: 170, parkingMonthly: 0, insuranceAnnual: 60000, sell: true, used: false, filter: "all" };
+
+  const filteredCars = () => (state.filter === "all" ? CARS : CARS.filter((c) => c.segment === state.filter));
+
+  $("seg-filter").addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    [...$("seg-filter").children].forEach((b) => b.classList.toggle("on", b === btn));
+    state.filter = btn.dataset.v;
+    render();
+  });
 
   const man = (n) => (n / 10000).toLocaleString("ja-JP", { maximumFractionDigits: 0 }) + "万";
 
@@ -339,15 +384,18 @@ if (typeof module !== "undefined") {
   );
 
   function render() {
-    const results = calcAll(CARS, state);
+    const results = calcAll(filteredCars(), state);
     renderTable(results);
     renderHighlight(results);
     renderChart(results);
     renderSweep();
   }
 
-  // 車種ごとの識別色(折れ線用)
-  const CAR_COLORS = ["#4c6ef5", "#e8590c", "#37b24d", "#f59f00", "#9c36b5", "#1098ad", "#e64980", "#5c940d", "#495057", "#845ef7"];
+  // 車種ごとの識別色(折れ線用)。全車種数に対応するためHSLで機械生成し、idに固定で割り当て
+  const CAR_COLORS = {};
+  CARS.forEach((c, i) => {
+    CAR_COLORS[c.id] = `hsl(${Math.round((i * 360) / CARS.length)}, 65%, ${i % 2 ? 42 : 52}%)`;
+  });
   const hiddenCars = new Set(); // 凡例クリックで非表示にした車種id
 
   $("sweep-legend").addEventListener("click", (e) => {
@@ -362,8 +410,8 @@ if (typeof module !== "undefined") {
   function renderSweep() {
     const YEARS = [];
     for (let y = 1; y <= 15; y++) YEARS.push(y);
-    // 「売り時」を見るビューなので売却前提。新車/中古トグルは反映
-    const series = CARS.map((car) => ({
+    // 「売り時」を見るビューなので売却前提。新車/中古トグル・セグメントフィルタは反映
+    const series = filteredCars().map((car) => ({
       car,
       pts: YEARS.map((y) => calcTCO(car, { ...state, years: y, sell: true }).perYear),
     }));
@@ -406,28 +454,28 @@ if (typeof module !== "undefined") {
     YEARS.forEach((yr, i) => ctx.fillText(yr + "年", xAt(i), H - padB + 6));
 
     // 折れ線(非表示車種はスキップ)
-    series.forEach((s, si) => {
+    series.forEach((s) => {
       if (hiddenCars.has(s.car.id)) return;
-      ctx.strokeStyle = CAR_COLORS[si];
+      ctx.strokeStyle = CAR_COLORS[s.car.id];
       ctx.lineWidth = s.car.id === "jimny" ? 2 : 1.5;
       ctx.beginPath();
       s.pts.forEach((v, i) => (i ? ctx.lineTo(xAt(i), yAt(v)) : ctx.moveTo(xAt(i), yAt(v))));
       ctx.stroke();
     });
     // 最小コスト年マーカー(線の上に描く)
-    series.forEach((s, si) => {
+    series.forEach((s) => {
       if (hiddenCars.has(s.car.id)) return;
       const x = xAt(s.minIdx), y = yAt(s.pts[s.minIdx]);
-      ctx.fillStyle = CAR_COLORS[si];
+      ctx.fillStyle = CAR_COLORS[s.car.id];
       ctx.beginPath(); ctx.arc(x, y, 4.5, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.5; ctx.stroke();
     });
 
     // 凡例(最小コスト年つき・クリックで表示切替)
     $("sweep-legend").innerHTML = series
-      .map((s, si) => {
+      .map((s) => {
         const off = hiddenCars.has(s.car.id);
-        return `<span data-id="${s.car.id}" style="--sw:${CAR_COLORS[si]};cursor:pointer;${off ? "opacity:.35;text-decoration:line-through;" : ""}">${s.car.name}(${YEARS[s.minIdx]}年目 ${man(s.pts[s.minIdx])}円/年)</span>`;
+        return `<span data-id="${s.car.id}" style="--sw:${CAR_COLORS[s.car.id]};cursor:pointer;${off ? "opacity:.35;text-decoration:line-through;" : ""}">${s.car.name}(${YEARS[s.minIdx]}年目 ${man(s.pts[s.minIdx])}円/年)</span>`;
       })
       .join("");
   }
