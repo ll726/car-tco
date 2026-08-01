@@ -115,6 +115,7 @@
 
   <section class="panel">
     <h2>年あたりコスト ランキング</h2>
+    <input type="search" id="in-search" placeholder="🔍 車種名で絞り込み(例: トヨタ、N-BOX)" style="width:100%;max-width:340px;padding:8px 12px;margin-bottom:10px;border:1px solid var(--line);border-radius:8px;font-size:14px">
     <div class="tablewrap">
       <table>
         <thead>
@@ -193,6 +194,7 @@
   const state = { years: 5, annualKm: 10000, fuelPrice: 170, parkingMonthly: 0, insuranceAnnual: 60000, sell: true, buyAge: 0, filter: "all" };
 
   $("in-buyage").addEventListener("change", (e) => { state.buyAge = +e.target.value; render(); });
+  $("in-search").addEventListener("input", (e) => { state.search = e.target.value.trim(); renderTable(calcAll(filteredCars(), state)); });
 
   const filteredCars = () => (state.filter === "all" ? CARS : CARS.filter((c) => c.segment === state.filter));
 
@@ -201,6 +203,7 @@
     if (!btn) return;
     [...$("seg-filter").children].forEach((b) => b.classList.toggle("on", b === btn));
     state.filter = btn.dataset.v;
+    resetSweepDefault();
     render();
   });
 
@@ -249,6 +252,12 @@
     CAR_COLORS[c.id] = `hsl(${Math.round((i * 360) / CARS.length)}, 65%, ${i % 2 ? 42 : 52}%)`;
   });
   const hiddenCars = new Set(); // 凡例クリックで非表示にした車種id
+
+  // 折れ線の初期表示: 現在のフィルタの年コスト上位8台のみON
+  function resetSweepDefault() {
+    hiddenCars.clear();
+    calcAll(filteredCars(), state).slice(8).forEach((r) => hiddenCars.add(r.car.id));
+  }
 
   $("sweep-legend").addEventListener("click", (e) => {
     const span = e.target.closest("span[data-id]");
@@ -333,6 +342,7 @@
   }
 
   function renderTable(results) {
+    if (state.search) results = results.filter((r) => r.car.name.includes(state.search));
     $("tbody").innerHTML = results
       .map((r, i) => {
         const b = r.breakdown;
@@ -372,6 +382,7 @@
   }
 
   function renderChart(results) {
+    results = results.slice(0, 15); // 車種数が多いため上位15台のみ描画
     const cv = $("chart");
     const dpr = window.devicePixelRatio || 1;
     const W = cv.parentElement.clientWidth - 4;
@@ -559,6 +570,7 @@
     `取得価格*は新車=値引き相場込みの実質価格、中古購入価格=買取相場×店頭マージン係数による理論値です。実際の店頭価格・値引き額は店舗により異なります。納期は目安であり、グレード・地域・時期により大きく変動します。データ基準日: ${DATA_DATE}`;
 
   window.addEventListener("resize", render);
+  resetSweepDefault();
   render();
 })();
 </script>
