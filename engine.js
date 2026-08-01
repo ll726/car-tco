@@ -94,8 +94,14 @@ function calcTCO(car, opts, settings = DEFAULT_SETTINGS) {
   const isKei = !car.ev && car.cc <= 660; // EVはcc:0でも軽扱いにしない
   const maintFactor = car.import ? settings.importMaintFactor : 1;
 
-  // 取得価格(中古 = 新車価格 × 購入時車齢の残価率。4点補間をそのまま使用)
-  const acquisition = used ? car.price * (residualRate(car.resid, buyAge) / 100) : car.price;
+  // 取得価格
+  //  新車 = 新車価格 - 値引き相場
+  //  中古 = 新車価格 × 購入時車齢の残価率(買取ベース) × 店頭マージン係数
+  //  売却側は買取ベース残価率のまま(マージン係数は掛けない)
+  const usedMargin = typeof USED_MARGIN !== "undefined" ? USED_MARGIN : 1.15;
+  const acquisition = used
+    ? car.price * (residualRate(car.resid, buyAge) / 100) * usedMargin
+    : car.price - (car.discount || 0);
 
   // 売却価格(車齢 = 購入時車齢 + 保有年数)
   const carAgeAtSale = years + buyAge;

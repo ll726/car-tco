@@ -1,5 +1,5 @@
 // 計算エンジンのコンソール検証: node test.js
-const { CARS } = require("./data.js");
+const { CARS, USED_MARGIN } = require("./data.js");
 const { calcAll, calcTCO, autoTax, weightTaxPerShaken, residualRate, mileageAdjustedRate, shakenYears } = require("./engine.js");
 
 const man = (n) => (n / 10000).toFixed(1) + "万";
@@ -104,8 +104,8 @@ console.assert(JSON.stringify(shakenYears(5, true)) === "[2,4]", "中古5年=2�
   const car = CARS.find((c) => c.id === "yaris"); // resid 62/50/38/12, 30,500円/年
   const o = { years: 5, annualKm: 10000, fuelPrice: 170, parkingMonthly: 0, insuranceAnnual: 60000, sell: true, buyAge: 7 };
   const r = calcTCO(car, o);
-  // 取得価格 = 新車価格 × 7年残価率38%
-  console.assert(r.acquisition === Math.round(car.price * 0.38), "7年落ちの取得価格=7年残価率");
+  // 取得価格 = 新車価格 × 7年残価率38% × 店頭マージン1.15
+  console.assert(r.acquisition === Math.round(car.price * 0.38 * 1.15), "7年落ちの取得価格=7年残価率×マージン");
   // 売却時車齢12年: 残価率 = y10(12%) - 2pt×2年 = 8%。総走行12万km=車齢12年×1万km基準で距離補正なし
   console.assert(residualRate(car.resid, 12) === 8, "車齢12年=10年超カーブ(y10-2pt/年)");
   console.assert(r.salePrice === Math.round(car.price * 0.08), "売却残価は車齢12年ベース");
@@ -116,6 +116,22 @@ console.assert(JSON.stringify(shakenYears(5, true)) === "[2,4]", "中古5年=2�
   console.assert(r8.breakdown.tax === Math.round(30500 * 6 + 30500 * 1.15 * 2), "7年落ち購入でも車齢14年以降は重課");
   // 重量税: 7年落ち購入の初回車検は2年後(保有2年目=車齢9年)から。車齢13超の車検(保有8年時点の車検=車齢13,15…)
   console.assert(JSON.stringify(shakenYears(5, true)) === "[2,4]", "中古は初回車検2年後(既存仕様維持)");
+}
+
+// 実質価格: 新車値引きと中古マージン係数
+{
+  const yaris = CARS.find((c) => c.id === "yaris"); // discount 180,000円
+  const o = { years: 5, annualKm: 10000, fuelPrice: 170, parkingMonthly: 0, insuranceAnnual: 60000, sell: true, buyAge: 0 };
+  // 新車 = 定価 - 値引き相場
+  console.assert(calcTCO(yaris, o).acquisition === yaris.price - 180000, "新車取得価格=定価-値引き");
+  // 値引き0円の車(LC250)は定価のまま
+  const lc = CARS.find((c) => c.id === "lc250");
+  console.assert(calcTCO(lc, o).acquisition === lc.price, "値引き0円は定価");
+  // 中古3年落ち = 定価 × 3年残価率(買取) × USED_MARGIN。売却側にはマージンを掛けない
+  const u = calcTCO(yaris, { ...o, buyAge: 3 });
+  console.assert(u.acquisition === Math.round(yaris.price * 0.62 * USED_MARGIN), "中古取得=買取残価×1.15");
+  console.assert(u.salePrice === Math.round(yaris.price * (residualRate(yaris.resid, 8) / 100)), "売却は買取ベースのまま");
+  console.assert(USED_MARGIN === 1.15, "USED_MARGIN定数");
 }
 
 console.log("assert完了(エラー表示が無ければOK)");

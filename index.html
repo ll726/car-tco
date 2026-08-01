@@ -90,7 +90,6 @@
           <option value="3">3年落ち</option>
           <option value="5">5年落ち</option>
           <option value="7">7年落ち</option>
-          <option value="10">10年落ち</option>
         </select>
       </label>
     </div>
@@ -114,7 +113,7 @@
     <div class="tablewrap">
       <table>
         <thead>
-          <tr><th>#</th><th>車種</th><th>年あたり</th><th>総コスト</th><th>取得価格</th><th>売却価格</th><th>減価償却</th><th>税金</th><th>車検</th><th>燃料</th><th>保険</th><th>駐車場</th><th>消耗品</th></tr>
+          <tr><th>#</th><th>車種</th><th>年あたり</th><th>総コスト</th><th title="新車は値引き相場を引いた実質価格、中古は買取相場×店頭マージン係数の理論値">取得価格*</th><th>売却価格</th><th>減価償却</th><th>税金</th><th>車検</th><th>燃料</th><th>保険</th><th>駐車場</th><th>消耗品</th></tr>
         </thead>
         <tbody id="tbody"></tbody>
       </table>
@@ -360,7 +359,8 @@
   }
 
   $("footer").textContent =
-    `残価率は中古車掲載相場ベースの概算です。実際の売却額・保険料・整備費は条件により変動します。※印の車種は残価率に推定値を含みます。データ基準日: ${DATA_DATE}`;
+    `残価率は買取相場ベースの概算です。実際の売却額・保険料・整備費は条件により変動します。※印の車種は残価率に推定値を含みます。` +
+    `取得価格*は新車=値引き相場込みの実質価格、中古購入価格=買取相場×店頭マージン係数による理論値です。実際の店頭価格・値引き額は店舗により異なります。データ基準日: ${DATA_DATE}`;
 
   window.addEventListener("resize", render);
   render();

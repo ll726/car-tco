@@ -90,7 +90,6 @@
           <option value="3">3年落ち</option>
           <option value="5">5年落ち</option>
           <option value="7">7年落ち</option>
-          <option value="10">10年落ち</option>
         </select>
       </label>
     </div>
@@ -114,7 +113,7 @@
     <div class="tablewrap">
       <table>
         <thead>
-          <tr><th>#</th><th>車種</th><th>年あたり</th><th>総コスト</th><th>取得価格</th><th>売却価格</th><th>減価償却</th><th>税金</th><th>車検</th><th>燃料</th><th>保険</th><th>駐車場</th><th>消耗品</th></tr>
+          <tr><th>#</th><th>車種</th><th>年あたり</th><th>総コスト</th><th title="新車は値引き相場を引いた実質価格、中古は買取相場×店頭マージン係数の理論値">取得価格*</th><th>売却価格</th><th>減価償却</th><th>税金</th><th>車検</th><th>燃料</th><th>保険</th><th>駐車場</th><th>消耗品</th></tr>
         </thead>
         <tbody id="tbody"></tbody>
       </table>
@@ -145,38 +144,41 @@
 // segment: 軽 / コンパクト / ミニバン / SUV / セダン・その他 / 輸入・EV
 // EV車は ev: true + kmPerKwh(電費)。燃料費は 電気単価31円/kWh で計算(engine.js)
 // price: 新車価格(円) / cc: 排気量 / weight: 車重kg / wltc: km/L
-// resid: 残価率% {y3, y5, y7} / import: 輸入車 / fuelPrice: 燃料単価上書き(円/L)
+// resid: 残価率% {y3, y5, y7, y10} — 買取相場ベースに統一(掲載価格ベースの情報は×1/1.15目安で補正して採用)
+// discount: 新車値引き相場(円)。2026-08時点のくるまはっく/カーネビ等の値引きレポートを参考
+// import: 輸入車 / fuelPrice: 燃料単価上書き(円/L)
 const DATA_DATE = "2026年8月"; // データ基準日(残価率・税額・自賠責料率の確認時点)
+const USED_MARGIN = 1.15; // 中古店頭マージン係数(店頭価格 ≒ 買取相場 × 1.15)。ヤリス/N-BOX/アルファードの3年落ち相場で妥当性確認済み
 
 const CARS = [
-  { id: "jimny", segment: "軽",    name: "スズキ ジムニー",            price: 1900000, cc: 660,  weight: 1040, wltc: 16.6, resid: { y3: 92, y5: 82, y7: 68, y10: 45 }, import: false, note: "残価最強クラス" },
-  { id: "nbox", segment: "軽",     name: "ホンダ N-BOX",               price: 1650000, cc: 660,  weight: 950,  wltc: 21.5, resid: { y3: 70, y5: 55, y7: 42, y10: 15 }, import: false, note: "軽の売れ筋" },
-  { id: "yaris", segment: "コンパクト",    name: "トヨタ ヤリス",              price: 1800000, cc: 1490, weight: 1000, wltc: 21.6, resid: { y3: 62, y5: 50, y7: 38, y10: 12 }, import: false, note: "ガソリン想定" },
-  { id: "fit", segment: "コンパクト",      name: "ホンダ フィット",            price: 2000000, cc: 1496, weight: 1120, wltc: 24.5, resid: { y3: 62, y5: 47, y7: 34, y10: 12 }, import: false, note: "e:HEV" },
-  { id: "corollax", segment: "SUV", name: "トヨタ カローラクロス",      price: 2750000, cc: 1798, weight: 1400, wltc: 26.4, resid: { y3: 80, y5: 68, y7: 50, y10: 22 }, import: false, note: "HV" },
-  { id: "alphard", segment: "ミニバン",  name: "トヨタ アルファード",        price: 5550000, cc: 2493, weight: 2110, wltc: 17.7, resid: { y3: 75, y5: 66, y7: 55, y10: 32 }, import: false, note: "残価率高い代表" },
-  { id: "lc250", segment: "SUV",    name: "トヨタ ランドクルーザー250", price: 5450000, cc: 2754, weight: 2330, wltc: 11.0, resid: { y3: 85, y5: 75, y7: 62, y10: 40 }, import: false, fuelPrice: 150, note: "ディーゼル(軽油150円/L)" },
-  { id: "serena", segment: "ミニバン",   name: "日産 セレナ",                price: 3100000, cc: 1433, weight: 1780, wltc: 19.3, resid: { y3: 62, y5: 48, y7: 34, y10: 12 }, import: false, note: "e-POWER" },
-  { id: "cclass", segment: "輸入・EV",   name: "メルセデス・ベンツ Cクラス", price: 6900000, cc: 1494, weight: 1690, wltc: 16.2, resid: { y3: 50, y5: 35, y7: 22, y10: 8 }, import: true,  note: "値落ち大の代表" },
-  { id: "bmw3", segment: "輸入・EV",     name: "BMW 3シリーズ",              price: 6300000, cc: 1998, weight: 1640, wltc: 13.5, resid: { y3: 48, y5: 33, y7: 20, y10: 8 }, import: true,  note: "同上" },
-  { id: "prius", segment: "セダン・その他", name: "トヨタ プリウス",         price: 2750000, cc: 1986, weight: 1360, wltc: 32.6, resid: { y3: 64, y5: 50, y7: 38, y10: 15 }, import: false, note: "2.0 HV" },
-  { id: "sienta", segment: "ミニバン",   name: "トヨタ シエンタ",            price: 2300000, cc: 1490, weight: 1330, wltc: 28.2, resid: { y3: 65, y5: 50, y7: 36, y10: 13 }, import: false, confidence: "low", note: "HV" }, // 5年以降は推定(個別相場未確認。国産ミニバン平均カーブで外挿)
-  { id: "harrier", segment: "SUV",      name: "トヨタ ハリアー",            price: 3500000, cc: 2487, weight: 1680, wltc: 22.3, resid: { y3: 78, y5: 58, y7: 47, y10: 18 }, import: false, note: "HV" },
-  { id: "voxy", segment: "ミニバン",    name: "トヨタ ヴォクシー",          price: 3090000, cc: 1797, weight: 1670, wltc: 23.0, resid: { y3: 72, y5: 58, y7: 48, y10: 18 }, import: false, note: "HV" },
-  { id: "crownsp", segment: "セダン・その他", name: "トヨタ クラウンスポーツ", price: 5900000, cc: 2487, weight: 1770, wltc: 21.3, resid: { y3: 62, y5: 46, y7: 33, y10: 12 }, import: false, confidence: "low", note: "HV" }, // 残価4点すべて推定(2023年発売で実測相場なし。先代クラウン相場から外挿)
-  { id: "note", segment: "コンパクト",  name: "日産 ノート",                price: 2300000, cc: 1198, weight: 1220, wltc: 28.4, resid: { y3: 55, y5: 42, y7: 28, y10: 10 }, import: false, confidence: "low", note: "e-POWER" }, // 残価は推定色強め(個別相場未確認。コンパクト平均カーブ)
-  { id: "cx5", segment: "SUV",          name: "マツダ CX-5",                price: 2900000, cc: 2188, weight: 1680, wltc: 17.4, resid: { y3: 60, y5: 44, y7: 30, y10: 11 }, import: false, confidence: "low", fuelPrice: 150, note: "ディーゼル(軽油150円/L)" }, // 5年以降は推定(3年落ちのみ相場確認)
-  { id: "roadster", segment: "セダン・その他", name: "マツダ ロードスター",  price: 2900000, cc: 1496, weight: 1010, wltc: 16.8, resid: { y3: 74, y5: 65, y7: 52, y10: 32 }, import: false, note: "スポーツで残価堅い" },
-  { id: "forester", segment: "SUV",     name: "スバル フォレスター",        price: 3100000, cc: 1795, weight: 1570, wltc: 13.6, resid: { y3: 68, y5: 52, y7: 38, y10: 14 }, import: false, confidence: "low", note: "1.8ターボ" }, // 5年以降は推定(3年落ち72%のみ相場確認)
-  { id: "spacia", segment: "軽",        name: "スズキ スペーシア",          price: 1550000, cc: 658,  weight: 850,  wltc: 23.9, resid: { y3: 65, y5: 50, y7: 35, y10: 12 }, import: false, confidence: "low", note: "軽ハイトワゴン" }, // 軽ランキング記事ベースの概算(グレード別実測なし)
-  { id: "tanto", segment: "軽",         name: "ダイハツ タント",            price: 1500000, cc: 658,  weight: 900,  wltc: 21.9, resid: { y3: 60, y5: 46, y7: 32, y10: 10 }, import: false, confidence: "low", note: "軽ハイトワゴン" }, // 軽ランキング記事ベースの概算(グレード別実測なし)
-  { id: "delica", segment: "ミニバン",  name: "三菱 デリカD:5",             price: 4050000, cc: 2267, weight: 1930, wltc: 12.6, resid: { y3: 75, y5: 58, y7: 44, y10: 22 }, import: false, confidence: "low", fuelPrice: 150, note: "ディーゼル(軽油150円/L)" }, // 7年以降は推定(3年80%/5年は相場確認)
-  { id: "vezel", segment: "SUV",        name: "ホンダ ヴェゼル",            price: 2500000, cc: 1496, weight: 1350, wltc: 25.0, resid: { y3: 66, y5: 52, y7: 38, y10: 14 }, import: false, confidence: "low", note: "e:HEV" }, // 残価は推定色強め(個別相場未確認。国産SUV平均カーブ)
-  { id: "nx", segment: "SUV",           name: "レクサス NX",                price: 5000000, cc: 2487, weight: 1850, wltc: 19.9, resid: { y3: 72, y5: 62, y7: 45, y10: 18 }, import: false, confidence: "low", note: "350h HV" }, // 7年/10年は推定(現行2021年発売。3年72%/5年62%は掲載相場、以降は先代NX相場から外挿)
-  { id: "model3", segment: "輸入・EV",  name: "テスラ モデル3",             price: 5300000, cc: 0, weight: 1760, wltc: 0, ev: true, kmPerKwh: 7.0, resid: { y3: 48, y5: 33, y7: 20, y10: 8 }, import: true, confidence: "low", note: "EV(電費7.0km/kWh・電気31円/kWh)" }, // 7年/10年は推定(3年約50%/5年30%台は相場確認。以降は輸入車カーブで外挿)
+  { id: "jimny", segment: "軽",    name: "スズキ ジムニー",            price: 1900000, cc: 660,  weight: 1040, wltc: 16.6, resid: { y3: 92, y5: 82, y7: 68, y10: 45 }, import: false, discount: 100000 /* 車両10万が合格ライン(渋い) */, note: "残価最強クラス" },
+  { id: "nbox", segment: "軽",     name: "ホンダ N-BOX",               price: 1650000, cc: 660,  weight: 950,  wltc: 21.5, resid: { y3: 70, y5: 55, y7: 42, y10: 15 }, import: false, discount: 50000 /* 軽は利益薄く5万事例 */, note: "軽の売れ筋" },
+  { id: "yaris", segment: "コンパクト",    name: "トヨタ ヤリス",              price: 1800000, cc: 1490, weight: 1000, wltc: 21.6, resid: { y3: 62, y5: 50, y7: 38, y10: 12 }, import: false, discount: 180000 /* 10万円台後半で安定 */, note: "ガソリン想定" },
+  { id: "fit", segment: "コンパクト",      name: "ホンダ フィット",            price: 2000000, cc: 1496, weight: 1120, wltc: 24.5, resid: { y3: 62, y5: 47, y7: 34, y10: 12 }, import: false, discount: 200000 /* ヤリス/ノート競合で20万超も */, note: "e:HEV" },
+  { id: "corollax", segment: "SUV", name: "トヨタ カローラクロス",      price: 2750000, cc: 1798, weight: 1400, wltc: 26.4, resid: { y3: 80, y5: 68, y7: 50, y10: 22 }, import: false, discount: 150000 /* 改良後も渋め */, note: "HV" },
+  { id: "alphard", segment: "ミニバン",  name: "トヨタ アルファード",        price: 5550000, cc: 2493, weight: 2110, wltc: 17.7, resid: { y3: 75, y5: 66, y7: 55, y10: 32 }, import: false, discount: 300000 /* 人気だが交渉で30万 */, note: "残価率高い代表" },
+  { id: "lc250", segment: "SUV",    name: "トヨタ ランドクルーザー250", price: 5450000, cc: 2754, weight: 2330, wltc: 11.0, resid: { y3: 85, y5: 75, y7: 62, y10: 40 }, import: false, fuelPrice: 150, discount: 0 /* 転売規制・実質値引きなし */, note: "ディーゼル(軽油150円/L)" },
+  { id: "serena", segment: "ミニバン",   name: "日産 セレナ",                price: 3100000, cc: 1433, weight: 1780, wltc: 19.3, resid: { y3: 62, y5: 48, y7: 34, y10: 12 }, import: false, discount: 300000 /* ミニバン競合で30万級 */, note: "e-POWER" },
+  { id: "cclass", segment: "輸入・EV",   name: "メルセデス・ベンツ Cクラス", price: 6900000, cc: 1494, weight: 1690, wltc: 16.2, resid: { y3: 50, y5: 35, y7: 22, y10: 8 }, import: true,  discount: 500000 /* 輸入セダンは大幅値引きあり */, note: "値落ち大の代表" },
+  { id: "bmw3", segment: "輸入・EV",     name: "BMW 3シリーズ",              price: 6300000, cc: 1998, weight: 1640, wltc: 13.5, resid: { y3: 48, y5: 33, y7: 20, y10: 8 }, import: true,  discount: 600000 /* 同上・在庫次第で更に */, note: "同上" },
+  { id: "prius", segment: "セダン・その他", name: "トヨタ プリウス",         price: 2750000, cc: 1986, weight: 1360, wltc: 32.6, resid: { y3: 64, y5: 50, y7: 38, y10: 15 }, import: false, discount: 200000 /* 20万前後で推移 */, note: "2.0 HV" },
+  { id: "sienta", segment: "ミニバン",   name: "トヨタ シエンタ",            price: 2300000, cc: 1490, weight: 1330, wltc: 28.2, resid: { y3: 65, y5: 50, y7: 36, y10: 13 }, import: false, confidence: "low", discount: 150000 /* コンパクトミニバン相場 */, note: "HV" }, // 5年以降は推定(個別相場未確認。国産ミニバン平均カーブで外挿)
+  { id: "harrier", segment: "SUV",      name: "トヨタ ハリアー",            price: 3500000, cc: 2487, weight: 1680, wltc: 22.3, resid: { y3: 78, y5: 58, y7: 47, y10: 18 }, import: false, discount: 250000 /* 人気SUVの標準的水準 */, note: "HV" },
+  { id: "voxy", segment: "ミニバン",    name: "トヨタ ヴォクシー",          price: 3090000, cc: 1797, weight: 1670, wltc: 23.0, resid: { y3: 72, y5: 58, y7: 48, y10: 18 }, import: false, discount: 300000 /* ノア/ステップワゴン競合 */, note: "HV" },
+  { id: "crownsp", segment: "セダン・その他", name: "トヨタ クラウンスポーツ", price: 5900000, cc: 2487, weight: 1770, wltc: 21.3, resid: { y3: 62, y5: 46, y7: 33, y10: 12 }, import: false, confidence: "low", discount: 200000 /* 高価格帯だが渋め */, note: "HV" }, // 残価4点すべて推定(2023年発売で実測相場なし。先代クラウン相場から外挿)
+  { id: "note", segment: "コンパクト",  name: "日産 ノート",                price: 2300000, cc: 1198, weight: 1220, wltc: 28.4, resid: { y3: 55, y5: 42, y7: 28, y10: 10 }, import: false, confidence: "low", discount: 200000 /* 御三家競合で20万狙える */, note: "e-POWER" }, // 残価は推定色強め(個別相場未確認。コンパクト平均カーブ)
+  { id: "cx5", segment: "SUV",          name: "マツダ CX-5",                price: 2900000, cc: 2188, weight: 1680, wltc: 17.4, resid: { y3: 60, y5: 44, y7: 30, y10: 11 }, import: false, confidence: "low", fuelPrice: 150, discount: 300000 /* 30万事例・末期で拡大 */, note: "ディーゼル(軽油150円/L)" }, // 5年以降は推定(3年落ちのみ相場確認)
+  { id: "roadster", segment: "セダン・その他", name: "マツダ ロードスター",  price: 2900000, cc: 1496, weight: 1010, wltc: 16.8, resid: { y3: 74, y5: 65, y7: 52, y10: 32 }, import: false, discount: 100000 /* スポーツは渋い */, note: "スポーツで残価堅い" },
+  { id: "forester", segment: "SUV",     name: "スバル フォレスター",        price: 3100000, cc: 1795, weight: 1570, wltc: 13.6, resid: { y3: 68, y5: 52, y7: 38, y10: 14 }, import: false, confidence: "low", discount: 250000 /* SUV競合水準 */, note: "1.8ターボ" }, // 5年以降は推定(3年落ち72%のみ相場確認)
+  { id: "spacia", segment: "軽",        name: "スズキ スペーシア",          price: 1550000, cc: 658,  weight: 850,  wltc: 23.9, resid: { y3: 65, y5: 50, y7: 35, y10: 12 }, import: false, confidence: "low", discount: 80000 /* 軽相場 */, note: "軽ハイトワゴン" }, // 軽ランキング記事ベースの概算(グレード別実測なし)
+  { id: "tanto", segment: "軽",         name: "ダイハツ タント",            price: 1500000, cc: 658,  weight: 900,  wltc: 21.9, resid: { y3: 60, y5: 46, y7: 32, y10: 10 }, import: false, confidence: "low", discount: 100000 /* 軽相場・競合多 */, note: "軽ハイトワゴン" }, // 軽ランキング記事ベースの概算(グレード別実測なし)
+  { id: "delica", segment: "ミニバン",  name: "三菱 デリカD:5",             price: 4050000, cc: 2267, weight: 1930, wltc: 12.6, resid: { y3: 75, y5: 58, y7: 44, y10: 22 }, import: false, confidence: "low", fuelPrice: 150, discount: 300000 /* MC直後は渋いが従来30万級 */, note: "ディーゼル(軽油150円/L)" }, // 7年以降は推定(3年80%/5年は相場確認)
+  { id: "vezel", segment: "SUV",        name: "ホンダ ヴェゼル",            price: 2500000, cc: 1496, weight: 1350, wltc: 25.0, resid: { y3: 66, y5: 52, y7: 38, y10: 14 }, import: false, confidence: "low", discount: 300000 /* キャンペーンで50万事例も平均30万 */, note: "e:HEV" }, // 残価は推定色強め(個別相場未確認。国産SUV平均カーブ)
+  { id: "nx", segment: "SUV",           name: "レクサス NX",                price: 5000000, cc: 2487, weight: 1850, wltc: 19.9, resid: { y3: 72, y5: 62, y7: 45, y10: 18 }, import: false, confidence: "low", discount: 0 /* レクサスは原則値引きなし */, note: "350h HV" }, // 7年/10年は推定(現行2021年発売。3年72%/5年62%は掲載相場、以降は先代NX相場から外挿)
+  { id: "model3", segment: "輸入・EV",  name: "テスラ モデル3",             price: 5300000, cc: 0, weight: 1760, wltc: 0, ev: true, kmPerKwh: 7.0, resid: { y3: 48, y5: 33, y7: 20, y10: 8 }, import: true, confidence: "low", discount: 0 /* テスラは定価販売 */, note: "EV(電費7.0km/kWh・電気31円/kWh)" }, // 7年/10年は推定(3年約50%/5年30%台は相場確認。以降は輸入車カーブで外挿)
 ];
 
-if (typeof module !== "undefined") module.exports = { CARS, DATA_DATE };
+if (typeof module !== "undefined") module.exports = { CARS, DATA_DATE, USED_MARGIN };
 </script>
 <script>
 // TCO計算エンジン(純関数のみ・DOM非依存)
@@ -275,8 +277,14 @@ function calcTCO(car, opts, settings = DEFAULT_SETTINGS) {
   const isKei = !car.ev && car.cc <= 660; // EVはcc:0でも軽扱いにしない
   const maintFactor = car.import ? settings.importMaintFactor : 1;
 
-  // 取得価格(中古 = 新車価格 × 購入時車齢の残価率。4点補間をそのまま使用)
-  const acquisition = used ? car.price * (residualRate(car.resid, buyAge) / 100) : car.price;
+  // 取得価格
+  //  新車 = 新車価格 - 値引き相場
+  //  中古 = 新車価格 × 購入時車齢の残価率(買取ベース) × 店頭マージン係数
+  //  売却側は買取ベース残価率のまま(マージン係数は掛けない)
+  const usedMargin = typeof USED_MARGIN !== "undefined" ? USED_MARGIN : 1.15;
+  const acquisition = used
+    ? car.price * (residualRate(car.resid, buyAge) / 100) * usedMargin
+    : car.price - (car.discount || 0);
 
   // 売却価格(車齢 = 購入時車齢 + 保有年数)
   const carAgeAtSale = years + buyAge;
@@ -584,7 +592,8 @@ if (typeof module !== "undefined") {
   }
 
   $("footer").textContent =
-    `残価率は中古車掲載相場ベースの概算です。実際の売却額・保険料・整備費は条件により変動します。※印の車種は残価率に推定値を含みます。データ基準日: ${DATA_DATE}`;
+    `残価率は買取相場ベースの概算です。実際の売却額・保険料・整備費は条件により変動します。※印の車種は残価率に推定値を含みます。` +
+    `取得価格*は新車=値引き相場込みの実質価格、中古購入価格=買取相場×店頭マージン係数による理論値です。実際の店頭価格・値引き額は店舗により異なります。データ基準日: ${DATA_DATE}`;
 
   window.addEventListener("resize", render);
   render();
