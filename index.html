@@ -83,6 +83,7 @@
         <button data-v="1" class="on">最後に売却する</button>
         <button data-v="0">乗りつぶす</button>
       </div>
+      <span style="font-size:12px;color:var(--sub);align-self:center">乗りつぶし=13年想定(変更可)・売却額0円</span>
       <div class="seg" id="seg-used">
         <button data-v="0" class="on">新車で購入</button>
         <button data-v="1">中古3年落ちで購入</button>
@@ -163,6 +164,12 @@
       if (!btn) return;
       [...$(id).children].forEach((b) => b.classList.toggle("on", b === btn));
       state[key] = btn.dataset.v === "1";
+      // 乗りつぶす選択時は保有年数を13年に自動変更(スライダーで手動変更は可)
+      if (key === "sell" && !state.sell) {
+        state.years = 13;
+        $("in-years").value = 13;
+        $("v-years").textContent = 13;
+      }
       render();
     });
   });

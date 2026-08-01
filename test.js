@@ -67,6 +67,38 @@ console.assert(JSON.stringify(shakenYears(5, true)) === "[2,4]", "中古5年=2�
   console.assert(weightTaxPerShaken(ev.weight, false, false) === Math.ceil(1760 / 500) * 4100 * 2, "EVの重量税は普通車区分");
 }
 
+// 経年重課(13年超: 自動車税15%増・重量税重課、18年超: 重量税さらに重課。EV対象外)
+{
+  const base = { annualKm: 10000, fuelPrice: 170, parkingMonthly: 0, insuranceAnnual: 60000, sell: false, used: false };
+  const yaris = CARS.find((c) => c.id === "yaris"); // 1490cc = 30,500円/年
+
+  // 新車15年保有: 車齢14,15年の2年分が15%重課
+  const r15 = calcTCO(yaris, { ...base, years: 15 });
+  console.assert(r15.breakdown.tax === Math.round(30500 * 13 + 30500 * 1.15 * 2), "自動車税13年超15%重課(新車15年)");
+  // 新車13年保有: 重課なし(車齢13は「13年超」でない)
+  const r13 = calcTCO(yaris, { ...base, years: 13 });
+  console.assert(r13.breakdown.tax === 30500 * 13, "車齢13年ちょうどは重課なし");
+  // 中古3年落ち12年保有: 車齢13超は保有11,12年目(車齢14,15)の2年分
+  const rU = calcTCO(yaris, { ...base, years: 12, used: true });
+  console.assert(rU.breakdown.tax === Math.round(30500 * 10 + 30500 * 1.15 * 2), "中古は車齢ベースで重課判定");
+
+  // 重量税: 1000kg=1.0t区分。通常8,200円/2年 → 13年超22,800円... の区分単価で判定
+  console.assert(weightTaxPerShaken(1000, false, false, 10) === 2 * 4100 * 2, "重量税 通常");
+  console.assert(weightTaxPerShaken(1000, false, false, 14) === 2 * 5700 * 2, "重量税 13年超重課");
+  console.assert(weightTaxPerShaken(1000, false, false, 19) === 2 * 6300 * 2, "重量税 18年超重課");
+  console.assert(weightTaxPerShaken(900, true, false, 14) === 8200, "軽の13年超重課");
+  console.assert(weightTaxPerShaken(1760, false, false, 14, true) === 4 * 4100 * 2, "EVは重量税重課の対象外");
+
+  // 中古15年保有の車検(2,4,...,14年目)のうち車齢13超(11年目=車齢14以降)は重課単価が乗る
+  const heavy = calcTCO(yaris, { ...base, years: 15, used: true });
+  const normal = calcTCO(yaris, { ...base, years: 15, used: false });
+  console.assert(heavy.breakdown.shaken > 0 && normal.breakdown.shaken > 0, "車検内訳が計算される");
+
+  // EVは自動車税の重課なし
+  const ev = CARS.find((c) => c.id === "model3");
+  console.assert(calcTCO(ev, { ...base, years: 15 }).breakdown.tax === 25000 * 15, "EVは自動車税重課なし");
+}
+
 console.log("assert完了(エラー表示が無ければOK)");
 
 // --- 標準条件: 5年・年1万km・売却あり・新車 ---

@@ -83,6 +83,7 @@
         <button data-v="1" class="on">最後に売却する</button>
         <button data-v="0">乗りつぶす</button>
       </div>
+      <span style="font-size:12px;color:var(--sub);align-self:center">乗りつぶし=13年想定(変更可)・売却額0円</span>
       <div class="seg" id="seg-used">
         <button data-v="0" class="on">新車で購入</button>
         <button data-v="1">中古3年落ちで購入</button>
@@ -200,10 +201,15 @@ function autoTax(cc, isEv) {
 }
 
 // 重量税(車検1回=2年分)。軽は定額、普通車は0.5tごと。エコカー減税は半額に簡略化
-function weightTaxPerShaken(weightKg, isKei, ecoFlag) {
+// carAge: 車検時点の車齢。13年超/18年超で重課(EVは対象外)
+function weightTaxPerShaken(weightKg, isKei, ecoFlag, carAge = 0, isEv = false) {
   let base;
-  if (isKei) base = 6600;
-  else base = Math.ceil(weightKg / 500) * 4100 * 2; // 4,100円/0.5t/年 × 2年
+  if (isKei) {
+    base = !isEv && carAge > 18 ? 8800 : !isEv && carAge > 13 ? 8200 : 6600;
+  } else {
+    const perHalfTonYear = !isEv && carAge > 18 ? 6300 : !isEv && carAge > 13 ? 5700 : 4100;
+    base = Math.ceil(weightKg / 500) * perHalfTonYear * 2;
+  }
   return ecoFlag ? Math.round(base / 2) : base;
 }
 
@@ -275,16 +281,28 @@ function calcTCO(car, opts, settings = DEFAULT_SETTINGS) {
     salePrice = car.price * (rate / 100);
   }
 
-  // 自動車税
-  const taxTotal = autoTax(car.cc, !!car.ev) * years;
+  // 自動車税(初度登録13年超は15%重課。EVは対象外)。保有t年目の車齢 = 中古なら+3
+  const taxBase = autoTax(car.cc, !!car.ev);
+  let taxTotal = 0;
+  const ageOffset = used ? 3 : 0;
+  for (let t = 1; t <= years; t++) {
+    const carAge = ageOffset + t;
+    taxTotal += !car.ev && carAge > 13 ? taxBase * 1.15 : taxBase;
+  }
 
   // 車検(重量税+自賠責は購入時の初回分も payment としてカウント)
   const shakens = shakenYears(years, used);
   const initialJibai = used ? (isKei ? JIBAISEKI.m24kei : JIBAISEKI.m24) : (isKei ? JIBAISEKI.m36kei : JIBAISEKI.m36);
   const perShakenJibai = isKei ? JIBAISEKI.m24kei : JIBAISEKI.m24;
-  const wtPerShaken = weightTaxPerShaken(car.weight, isKei, !!car.eco);
-  const wtInitial = used ? wtPerShaken : Math.round(wtPerShaken * 1.5); // 新車初回は3年分
-  const legalTotal = wtInitial + initialJibai + shakens.length * (wtPerShaken + perShakenJibai);
+  // 重量税は車検時点の車齢で重課判定(新車初回=車齢0で3年分、中古初回=車齢3)
+  const wtInitial = used
+    ? weightTaxPerShaken(car.weight, isKei, !!car.eco, 3, !!car.ev)
+    : Math.round(weightTaxPerShaken(car.weight, isKei, !!car.eco, 0, !!car.ev) * 1.5);
+  const wtShakens = shakens.reduce(
+    (sum, t) => sum + weightTaxPerShaken(car.weight, isKei, !!car.eco, ageOffset + t, !!car.ev),
+    0
+  );
+  const legalTotal = wtInitial + initialJibai + wtShakens + shakens.length * perShakenJibai;
 
   // 車検整備費(法定費用除く)
   const maintBase = isKei ? 40000 : car.import ? 90000 : 60000;
@@ -368,6 +386,12 @@ if (typeof module !== "undefined") {
       if (!btn) return;
       [...$(id).children].forEach((b) => b.classList.toggle("on", b === btn));
       state[key] = btn.dataset.v === "1";
+      // 乗りつぶす選択時は保有年数を13年に自動変更(スライダーで手動変更は可)
+      if (key === "sell" && !state.sell) {
+        state.years = 13;
+        $("in-years").value = 13;
+        $("v-years").textContent = 13;
+      }
       render();
     });
   });
