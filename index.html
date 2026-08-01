@@ -52,8 +52,13 @@
 <header>
   <h1>🚗 車の総保有コスト(TCO)比較ツール</h1>
   <p>新車価格ではなく「実質コスト」で比較。残価・税金・車検・燃料まで含めた本当の維持費を計算します。</p>
+  <button id="btn-wizard" style="margin-top:10px;padding:9px 20px;border:0;border-radius:8px;background:#fff;color:#1a6ee0;font-weight:700;font-size:14px;cursor:pointer">🔍 かんたん診断(4つの質問であなた向けの車を提案)</button>
 </header>
 <main>
+  <section class="panel" id="wizard" style="display:none">
+    <h2>かんたん診断</h2>
+    <div id="wizard-body"></div>
+  </section>
   <section class="panel">
     <h2>条件設定</h2>
     <div class="controls">
@@ -355,6 +360,107 @@
       ctx.fillStyle = "#6b7686";
       ctx.textAlign = "left";
       ctx.fillText(man(r.total) + "円", x + 6, y + rowH / 2);
+    });
+  }
+
+  // ---- かんたん診断(既存エンジンcalcAllを呼ぶだけ。新計算ロジックなし) ----
+  const WIZ_QUESTIONS = [
+    { q: "Q1. 普段、車に乗る人数は?", key: "people", opts: [
+      ["1〜2人", ["軽", "コンパクト", "セダン・その他"]],
+      ["3〜4人", ["コンパクト", "SUV", "ミニバン", "セダン・その他"]],
+      ["5人以上", ["ミニバン", "SUV"]],
+    ]},
+    { q: "Q2. 使い方は?", key: "usage", opts: [
+      ["毎日通勤で使う", 12000],
+      ["週末メイン", 8000],
+      ["月数回だけ", 4000],
+    ]},
+    { q: "Q3. 何年くらい乗る予定?", key: "term", opts: [
+      ["3年くらいで乗り換え", { years: 3, sell: true }],
+      ["5〜7年", { years: 5, sell: true }],
+      ["長く乗りつぶす", { years: 13, sell: false }],
+      ["わからない", { years: 13, sell: false }],
+    ]},
+    { q: "Q4. 車の予算上限は?(乗り出し価格)", key: "budget", opts: [
+      ["こだわらない", Infinity],
+      ["300万円まで", 3000000],
+      ["200万円まで", 2000000],
+      ["150万円まで", 1500000],
+    ]},
+  ];
+  const wizAnswers = {};
+  let wizStep = 0;
+
+  $("btn-wizard").addEventListener("click", () => {
+    wizStep = 0;
+    $("wizard").style.display = "block";
+    renderWizard();
+    $("wizard").scrollIntoView({ behavior: "smooth" });
+  });
+
+  function renderWizard() {
+    const body = $("wizard-body");
+    if (wizStep < WIZ_QUESTIONS.length) {
+      const { q, key, opts } = WIZ_QUESTIONS[wizStep];
+      body.innerHTML = `<p style="font-weight:700;margin:4px 0 10px">${q}</p>` +
+        opts.map(([label], i) =>
+          `<button class="wiz-opt" data-i="${i}" style="display:block;width:100%;max-width:420px;margin:6px 0;padding:11px 14px;text-align:left;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:14px;cursor:pointer">${label}</button>`
+        ).join("") +
+        `<p style="font-size:12px;color:var(--sub)">${wizStep + 1} / ${WIZ_QUESTIONS.length}</p>`;
+      body.querySelectorAll(".wiz-opt").forEach((b) =>
+        b.addEventListener("click", () => {
+          wizAnswers[key] = opts[+b.dataset.i][1];
+          wizStep++;
+          renderWizard();
+        })
+      );
+    } else {
+      renderWizardResult(body);
+    }
+  }
+
+  function renderWizardResult(body) {
+    const opts = {
+      years: wizAnswers.term.years, sell: wizAnswers.term.sell,
+      annualKm: wizAnswers.usage, buyAge: 0,
+      fuelPrice: state.fuelPrice, parkingMonthly: state.parkingMonthly, insuranceAnnual: state.insuranceAnnual,
+    };
+    const all = calcAll(CARS, opts);
+    const matches = all.filter((r) => wizAnswers.people.includes(r.car.segment) && r.acquisition <= wizAnswers.budget);
+    if (!matches.length) {
+      body.innerHTML = `<p>条件に合う車が見つかりませんでした。予算を上げるか、下の表で全車種を確認してください。</p>`;
+      return;
+    }
+    const top3 = matches.slice(0, 3);
+    const winner = top3[0];
+    // 損失回避メッセージ: 絞り込み前ランキングで上位の「人気車」のうち、診断結果1位より年コストが高い車と比較
+    const POPULAR = ["alphard", "harrier", "nbox", "voxy", "yaris"];
+    const rival = all.find((r) => POPULAR.includes(r.car.id) && r.car.id !== winner.car.id && r.perYear > winner.perYear);
+    const diffMsg = rival
+      ? `<p style="background:#fff8e1;border:1px solid #ffd54f;border-radius:8px;padding:10px 14px;font-size:13px">💡 もし人気の<b>${rival.car.name}</b>を選ぶと、${opts.years}年で<b>${man((rival.perYear - winner.perYear) * opts.years)}円多く</b>かかります。</p>`
+      : "";
+    body.innerHTML =
+      `<p style="font-weight:700">あなたにおすすめの3台(${opts.years}年${opts.sell ? "で売却" : "乗りつぶし"}・年${(opts.annualKm / 10000).toFixed(1)}万km想定)</p>` +
+      `<div style="display:flex;gap:12px;flex-wrap:wrap">` +
+      top3.map((r, i) =>
+        `<div style="flex:1;min-width:200px;border:2px solid ${i === 0 ? "var(--accent)" : "var(--line)"};border-radius:10px;padding:14px">
+          <div style="font-size:13px;color:var(--sub)">${["🥇 1位", "🥈 2位", "🥉 3位"][i]}</div>
+          <div style="font-weight:700;margin:4px 0">${r.car.name}${r.car.confidence === "low" ? "※" : ""}</div>
+          ${i === 0 ? `<div style="font-size:12px;color:var(--sub)">あなたの条件での実質年コスト</div>` : ""}
+          <div style="font-size:${i === 0 ? 22 : 17}px;font-weight:700;color:var(--accent)">${man(r.perYear)}円<span style="font-size:12px;color:var(--sub)">/年</span></div>
+          <div style="font-size:12px;color:var(--sub)">取得${man(r.acquisition)}円 / 総額${man(r.total)}円</div>
+        </div>`
+      ).join("") + `</div>` + diffMsg +
+      `<p><a href="#" id="wiz-apply" style="font-size:13px">▼ 全条件を自分で調整する(この条件をランキング表に反映)</a></p>`;
+    $("wiz-apply").addEventListener("click", (e) => {
+      e.preventDefault();
+      state.years = opts.years; state.annualKm = opts.annualKm; state.sell = opts.sell;
+      $("in-years").value = state.years; $("v-years").textContent = state.years;
+      $("in-km").value = state.annualKm; $("v-km").textContent = state.annualKm.toLocaleString();
+      [...$("seg-sell").children].forEach((b) => b.classList.toggle("on", (b.dataset.v === "1") === state.sell));
+      $("wizard").style.display = "none";
+      render();
+      document.querySelector("table").scrollIntoView({ behavior: "smooth" });
     });
   }
 
