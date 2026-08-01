@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>車の実質コスト比較 | 5年後いくら損する?TCO計算ツール</title>
+<meta name="description" content="新車価格ではなく実質コストで車を比較。残価率・税金・車検・燃料費まで含めた5年総保有コスト(TCO)を個人の条件で計算できる無料ツール。">
+<meta property="og:title" content="車の実質コスト比較 | 5年後いくら損する?TCO計算ツール">
+<meta property="og:description" content="新車価格ではなく実質コストで車を比較。残価率・税金・車検・燃料費まで含めた5年総保有コスト(TCO)を個人の条件で計算できる無料ツール。">
+<meta property="og:type" content="website">
+<style>
+  :root {
+    --bg: #f4f6f9; --card: #ffffff; --ink: #1e2530; --sub: #6b7686;
+    --accent: #1a6ee0; --line: #e2e7ee;
+    --c-dep: #4c6ef5; --c-tax: #94a3b8; --c-shaken: #f59f00; --c-fuel: #e8590c;
+    --c-ins: #37b24d; --c-park: #9c36b5; --c-cons: #1098ad;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif; background: var(--bg); color: var(--ink); }
+  header { background: linear-gradient(120deg, #16324f, #1a6ee0); color: #fff; padding: 20px 24px; }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 6px 0 0; font-size: 13px; opacity: .85; }
+  main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; margin-bottom: 16px; }
+  .panel h2 { margin: 0 0 12px; font-size: 15px; }
+  .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px 22px; }
+  .ctl label { display: flex; justify-content: space-between; font-size: 13px; color: var(--sub); margin-bottom: 4px; }
+  .ctl label b { color: var(--ink); }
+  .ctl input[type=range] { width: 100%; }
+  .ctl input[type=number] { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; }
+  .toggles { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; background: #fff; padding: 8px 14px; font-size: 13px; cursor: pointer; color: var(--sub); }
+  .seg button.on { background: var(--accent); color: #fff; }
+  #highlight { display: none; background: #fff8e1; border: 1px solid #ffd54f; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; font-size: 14px; }
+  #highlight b { color: #b26a00; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  th { color: var(--sub); font-weight: 600; background: #fafbfd; position: sticky; top: 0; }
+  th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+  td.rank { font-weight: 700; color: var(--accent); }
+  tr:nth-child(1) td.rank { color: #e8590c; }
+  .tablewrap { overflow-x: auto; }
+  .peryear { font-weight: 700; }
+  #chart { width: 100%; height: auto; display: block; }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--sub); margin-top: 8px; }
+  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; background: var(--sw); }
+  footer { max-width: 1100px; margin: 0 auto; text-align: center; color: var(--sub); font-size: 12px; line-height: 1.7; padding: 14px 16px 28px; overflow-wrap: break-word; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🚗 車の総保有コスト(TCO)比較ツール</h1>
+  <p>新車価格ではなく「実質コスト」で比較。残価・税金・車検・燃料まで含めた本当の維持費を計算します。</p>
+</header>
+<main>
+  <section class="panel">
+    <h2>条件設定</h2>
+    <div class="controls">
+      <div class="ctl">
+        <label>保有年数 <b><span id="v-years">5</span>年</b></label>
+        <input type="range" id="in-years" min="1" max="15" step="1" value="5">
+      </div>
+      <div class="ctl">
+        <label>年間走行距離 <b><span id="v-km">10,000</span>km</b></label>
+        <input type="range" id="in-km" min="3000" max="30000" step="1000" value="10000">
+      </div>
+      <div class="ctl">
+        <label>ガソリン単価(円/L)</label>
+        <input type="number" id="in-fuel" value="170" min="100" max="300" step="1">
+      </div>
+      <div class="ctl">
+        <label>駐車場代(月額円)</label>
+        <input type="number" id="in-park" value="0" min="0" step="1000">
+      </div>
+      <div class="ctl">
+        <label>任意保険(年額円)</label>
+        <input type="number" id="in-ins" value="60000" min="0" step="5000">
+      </div>
+    </div>
+    <div class="toggles">
+      <div class="seg" id="seg-sell">
+        <button data-v="1" class="on">最後に売却する</button>
+        <button data-v="0">乗りつぶす</button>
+      </div>
+      <div class="seg" id="seg-used">
+        <button data-v="0" class="on">新車で購入</button>
+        <button data-v="1">中古3年落ちで購入</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="highlight"></div>
+
+  <section class="panel">
+    <h2>年あたりコスト ランキング</h2>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>車種</th><th>年あたり</th><th>総コスト</th><th>取得価格</th><th>売却価格</th><th>減価償却</th><th>税金</th><th>車検</th><th>燃料</th><th>保険</th><th>駐車場</th><th>消耗品</th></tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>コスト内訳(積み上げ)</h2>
+    <canvas id="chart"></canvas>
+    <div class="legend">
+      <span style="--sw:var(--c-dep)">減価償却</span><span style="--sw:var(--c-tax)">税金</span>
+      <span style="--sw:var(--c-shaken)">車検</span><span style="--sw:var(--c-fuel)">燃料</span>
+      <span style="--sw:var(--c-ins)">保険</span><span style="--sw:var(--c-park)">駐車場</span>
+      <span style="--sw:var(--c-cons)">消耗品</span>
+    </div>
+  </section>
+  <section class="panel">
+    <h2>最適売却時期(保有1〜15年の年あたり実質コスト)</h2>
+    <p style="margin:0 0 8px;font-size:12px;color:var(--sub)">走行距離・単価などは上の条件を反映(売却前提)。●は各車種の年あたりコストが最小になる=売り時の年。</p>
+    <canvas id="sweep"></canvas>
+    <div class="legend" id="sweep-legend"></div>
+  </section>
+</main>
+<footer id="footer"></footer>
+
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const state = { years: 5, annualKm: 10000, fuelPrice: 170, parkingMonthly: 0, insuranceAnnual: 60000, sell: true, used: false };
+
+  const man = (n) => (n / 10000).toLocaleString("ja-JP", { maximumFractionDigits: 0 }) + "万";
+
+  const SEGS = [
+    ["seg-sell", "sell"],
+    ["seg-used", "used"],
+  ];
+  SEGS.forEach(([id, key]) => {
+    $(id).addEventListener("click", (e) => {
+      const btn = e.target.closest("button");
+      if (!btn) return;
+      [...$(id).children].forEach((b) => b.classList.toggle("on", b === btn));
+      state[key] = btn.dataset.v === "1";
+      render();
+    });
+  });
+
+  $("in-years").addEventListener("input", (e) => { state.years = +e.target.value; $("v-years").textContent = state.years; render(); });
+  $("in-km").addEventListener("input", (e) => { state.annualKm = +e.target.value; $("v-km").textContent = state.annualKm.toLocaleString(); render(); });
+  $("in-fuel").addEventListener("input", (e) => { state.fuelPrice = +e.target.value || 0; render(); });
+  $("in-park").addEventListener("input", (e) => { state.parkingMonthly = +e.target.value || 0; render(); });
+  $("in-ins").addEventListener("input", (e) => { state.insuranceAnnual = +e.target.value || 0; render(); });
+
+  const KEYS = ["depreciation", "tax", "shaken", "fuel", "insurance", "parking", "consumables"];
+  const COLORS = ["--c-dep", "--c-tax", "--c-shaken", "--c-fuel", "--c-ins", "--c-park", "--c-cons"].map((v) =>
+    getComputedStyle(document.documentElement).getPropertyValue(v).trim()
+  );
+
+  function render() {
+    const results = calcAll(CARS, state);
+    renderTable(results);
+    renderHighlight(results);
+    renderChart(results);
+    renderSweep();
+  }
+
+  // 車種ごとの識別色(折れ線用)
+  const CAR_COLORS = ["#4c6ef5", "#e8590c", "#37b24d", "#f59f00", "#9c36b5", "#1098ad", "#e64980", "#5c940d", "#495057", "#845ef7"];
+  const hiddenCars = new Set(); // 凡例クリックで非表示にした車種id
+
+  $("sweep-legend").addEventListener("click", (e) => {
+    const span = e.target.closest("span[data-id]");
+    if (!span) return;
+    const id = span.dataset.id;
+    hiddenCars.has(id) ? hiddenCars.delete(id) : hiddenCars.add(id);
+    renderSweep();
+  });
+
+  // 保有1〜15年スイープ: 年あたり実質コストの折れ線 + 最小コスト年マーカー
+  function renderSweep() {
+    const YEARS = [];
+    for (let y = 1; y <= 15; y++) YEARS.push(y);
+    // 「売り時」を見るビューなので売却前提。新車/中古トグルは反映
+    const series = CARS.map((car) => ({
+      car,
+      pts: YEARS.map((y) => calcTCO(car, { ...state, years: y, sell: true }).perYear),
+    }));
+    series.forEach((s) => {
+      s.minIdx = s.pts.reduce((mi, v, i) => (v < s.pts[mi] ? i : mi), 0);
+    });
+
+    const cv = $("sweep");
+    const dpr = window.devicePixelRatio || 1;
+    const W = cv.parentElement.clientWidth - 4;
+    const H = 340, padL = 60, padR = 16, padT = 12, padB = 28;
+    cv.width = W * dpr; cv.height = H * dpr;
+    cv.style.width = W + "px"; cv.style.height = H + "px";
+    const ctx = cv.getContext("2d");
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, W, H);
+    ctx.font = "11px sans-serif";
+
+    const visible = series.filter((s) => !hiddenCars.has(s.car.id));
+    const allVals = (visible.length ? visible : series).flatMap((s) => s.pts); // 表示中の車種だけでスケール調整
+    const maxV = Math.max(...allVals) * 1.05;
+    const minV = 0;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    const xAt = (i) => padL + (i / (YEARS.length - 1)) * plotW;
+    const yAt = (v) => padT + plotH - ((v - minV) / (maxV - minV)) * plotH;
+
+    // 目盛り(横グリッド + 縦=年)
+    ctx.strokeStyle = "#e2e7ee";
+    ctx.fillStyle = "#6b7686";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    const step = maxV > 1500000 ? 500000 : 200000;
+    for (let v = 0; v <= maxV; v += step) {
+      const y = yAt(v);
+      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+      ctx.fillText(man(v) + "円", padL - 6, y);
+    }
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    YEARS.forEach((yr, i) => ctx.fillText(yr + "年", xAt(i), H - padB + 6));
+
+    // 折れ線(非表示車種はスキップ)
+    series.forEach((s, si) => {
+      if (hiddenCars.has(s.car.id)) return;
+      ctx.strokeStyle = CAR_COLORS[si];
+      ctx.lineWidth = s.car.id === "jimny" ? 2 : 1.5;
+      ctx.beginPath();
+      s.pts.forEach((v, i) => (i ? ctx.lineTo(xAt(i), yAt(v)) : ctx.moveTo(xAt(i), yAt(v))));
+      ctx.stroke();
+    });
+    // 最小コスト年マーカー(線の上に描く)
+    series.forEach((s, si) => {
+      if (hiddenCars.has(s.car.id)) return;
+      const x = xAt(s.minIdx), y = yAt(s.pts[s.minIdx]);
+      ctx.fillStyle = CAR_COLORS[si];
+      ctx.beginPath(); ctx.arc(x, y, 4.5, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.5; ctx.stroke();
+    });
+
+    // 凡例(最小コスト年つき・クリックで表示切替)
+    $("sweep-legend").innerHTML = series
+      .map((s, si) => {
+        const off = hiddenCars.has(s.car.id);
+        return `<span data-id="${s.car.id}" style="--sw:${CAR_COLORS[si]};cursor:pointer;${off ? "opacity:.35;text-decoration:line-through;" : ""}">${s.car.name}(${YEARS[s.minIdx]}年目 ${man(s.pts[s.minIdx])}円/年)</span>`;
+      })
+      .join("");
+  }
+
+  function renderTable(results) {
+    $("tbody").innerHTML = results
+      .map((r, i) => {
+        const b = r.breakdown;
+        return `<tr>
+          <td class="rank">${i + 1}</td><td>${r.car.name}</td>
+          <td class="peryear">${man(r.perYear)}円</td><td>${man(r.total)}円</td>
+          <td>${man(r.acquisition)}円</td><td>${r.salePrice ? man(r.salePrice) + "円" : "—"}</td>
+          <td>${man(b.depreciation)}</td><td>${man(b.tax)}</td><td>${man(b.shaken)}</td>
+          <td>${man(b.fuel)}</td><td>${man(b.insurance)}</td><td>${man(b.parking)}</td><td>${man(b.consumables)}</td>
+        </tr>`;
+      })
+      .join("");
+  }
+
+  // 「意外な結論」: 新車価格が1.5倍以上高いのに年コストが安い組み合わせを検出
+  function renderHighlight(results) {
+    const el = $("highlight");
+    let best = null;
+    for (const hi of results) {
+      for (const lo of results) {
+        if (hi.car.price >= lo.car.price * 1.5 && hi.perYear < lo.perYear) {
+          const gap = lo.perYear - hi.perYear;
+          if (!best || gap > best.gap) best = { hi, lo, gap };
+        }
+      }
+    }
+    if (best) {
+      el.style.display = "block";
+      el.innerHTML = `💡 <b>意外な結論:</b> 新車価格が${man(best.hi.car.price)}円の<b>${best.hi.car.name}</b>は、` +
+        `${man(best.lo.car.price)}円の<b>${best.lo.car.name}</b>より年あたり<b>${man(best.gap)}円安い</b>` +
+        `(${man(best.hi.perYear)}円/年 vs ${man(best.lo.perYear)}円/年)。残価率の差が価格差を逆転させています。`;
+    } else {
+      el.style.display = "none";
+    }
+  }
+
+  function renderChart(results) {
+    const cv = $("chart");
+    const dpr = window.devicePixelRatio || 1;
+    const W = cv.parentElement.clientWidth - 4;
+    const rowH = 34, padL = 150, padR = 70, padT = 10;
+    const H = padT + results.length * rowH + 30;
+    cv.width = W * dpr; cv.height = H * dpr;
+    cv.style.width = W + "px"; cv.style.height = H + "px";
+    const ctx = cv.getContext("2d");
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, W, H);
+    ctx.font = "12px sans-serif";
+
+    const maxTotal = Math.max(...results.map((r) => r.total));
+    const plotW = W - padL - padR;
+
+    results.forEach((r, i) => {
+      const y = padT + i * rowH;
+      ctx.fillStyle = "#1e2530";
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      ctx.fillText(r.car.name, padL - 8, y + rowH / 2, padL - 12);
+      let x = padL;
+      KEYS.forEach((k, ki) => {
+        const w = (r.breakdown[k] / maxTotal) * plotW;
+        if (w <= 0) return;
+        ctx.fillStyle = COLORS[ki];
+        ctx.fillRect(x, y + 6, w, rowH - 12);
+        x += w;
+      });
+      ctx.fillStyle = "#6b7686";
+      ctx.textAlign = "left";
+      ctx.fillText(man(r.total) + "円", x + 6, y + rowH / 2);
+    });
+  }
+
+  $("footer").textContent =
+    `残価率は中古車掲載相場ベースの概算です。実際の売却額・保険料・整備費は条件により変動します。データ基準日: ${DATA_DATE}`;
+
+  window.addEventListener("resize", render);
+  render();
+})();
+</script>
+</body>
+</html>
