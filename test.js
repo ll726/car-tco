@@ -25,7 +25,7 @@ console.assert(JSON.stringify(shakenYears(5, true)) === "[2,4]", "中古5年=2�
 // 5年保有なら車齢8年: residualRate(7→10年区間の補間) - 走行距離補正 で計算されるはず
 {
   const car = CARS.find((c) => c.id === "yaris"); // resid 62/50/38
-  const o = { years: 5, annualKm: 10000, fuelPrice: 170, parkingMonthly: 0, insuranceAnnual: 60000, sell: true, used: true };
+  const o = { years: 5, annualKm: 10000, fuelPrice: 170, parkingMonthly: 0, insuranceAnnual: 60000, sell: true, buyAge: 3 };
   const r = calcTCO(car, o);
   // 車齢8年時点の素の残価率: y7とy10の線形補間 = 38 + (12-38)/3 ≒ 29.33%
   const expectedRate = residualRate(car.resid, 8);
@@ -39,7 +39,7 @@ console.assert(JSON.stringify(shakenYears(5, true)) === "[2,4]", "中古5年=2�
 // ランクル250の燃料単価は軽油150円/Lで独立しているか(全体設定のガソリン単価に影響されない)
 {
   const lc = CARS.find((c) => c.id === "lc250");
-  const base = { years: 5, annualKm: 10000, parkingMonthly: 0, insuranceAnnual: 60000, sell: true, used: false };
+  const base = { years: 5, annualKm: 10000, parkingMonthly: 0, insuranceAnnual: 60000, sell: true, buyAge: 0 };
   const r170 = calcTCO(lc, { ...base, fuelPrice: 170 });
   const r200 = calcTCO(lc, { ...base, fuelPrice: 200 });
   console.assert(r170.breakdown.fuel === r200.breakdown.fuel, "LC250の燃料費はopts.fuelPriceに依存しない");
@@ -53,7 +53,7 @@ console.assert(JSON.stringify(shakenYears(5, true)) === "[2,4]", "中古5年=2�
 // EV(テスラ モデル3)の計算
 {
   const ev = CARS.find((c) => c.id === "model3");
-  const base = { years: 5, annualKm: 10000, fuelPrice: 170, parkingMonthly: 0, insuranceAnnual: 60000, sell: true, used: false };
+  const base = { years: 5, annualKm: 10000, fuelPrice: 170, parkingMonthly: 0, insuranceAnnual: 60000, sell: true, buyAge: 0 };
   const r = calcTCO(ev, base);
   // 燃料費 = 年1万km ÷ 電費7.0km/kWh × 31円/kWh × 5年(WLTC補正0.85は適用しない)
   const expectedElec = Math.round((10000 / 7.0) * 31 * 5);
@@ -69,7 +69,7 @@ console.assert(JSON.stringify(shakenYears(5, true)) === "[2,4]", "中古5年=2�
 
 // 経年重課(13年超: 自動車税15%増・重量税重課、18年超: 重量税さらに重課。EV対象外)
 {
-  const base = { annualKm: 10000, fuelPrice: 170, parkingMonthly: 0, insuranceAnnual: 60000, sell: false, used: false };
+  const base = { annualKm: 10000, fuelPrice: 170, parkingMonthly: 0, insuranceAnnual: 60000, sell: false, buyAge: 0 };
   const yaris = CARS.find((c) => c.id === "yaris"); // 1490cc = 30,500円/年
 
   // 新車15年保有: 車齢14,15年の2年分が15%重課
@@ -79,7 +79,7 @@ console.assert(JSON.stringify(shakenYears(5, true)) === "[2,4]", "中古5年=2�
   const r13 = calcTCO(yaris, { ...base, years: 13 });
   console.assert(r13.breakdown.tax === 30500 * 13, "車齢13年ちょうどは重課なし");
   // 中古3年落ち12年保有: 車齢13超は保有11,12年目(車齢14,15)の2年分
-  const rU = calcTCO(yaris, { ...base, years: 12, used: true });
+  const rU = calcTCO(yaris, { ...base, years: 12, buyAge: 3 });
   console.assert(rU.breakdown.tax === Math.round(30500 * 10 + 30500 * 1.15 * 2), "中古は車齢ベースで重課判定");
 
   // 重量税: 1000kg=1.0t区分。通常8,200円/2年 → 13年超22,800円... の区分単価で判定
@@ -90,8 +90,8 @@ console.assert(JSON.stringify(shakenYears(5, true)) === "[2,4]", "中古5年=2�
   console.assert(weightTaxPerShaken(1760, false, false, 14, true) === 4 * 4100 * 2, "EVは重量税重課の対象外");
 
   // 中古15年保有の車検(2,4,...,14年目)のうち車齢13超(11年目=車齢14以降)は重課単価が乗る
-  const heavy = calcTCO(yaris, { ...base, years: 15, used: true });
-  const normal = calcTCO(yaris, { ...base, years: 15, used: false });
+  const heavy = calcTCO(yaris, { ...base, years: 15, buyAge: 3 });
+  const normal = calcTCO(yaris, { ...base, years: 15, buyAge: 0 });
   console.assert(heavy.breakdown.shaken > 0 && normal.breakdown.shaken > 0, "車検内訳が計算される");
 
   // EVは自動車税の重課なし
@@ -99,10 +99,29 @@ console.assert(JSON.stringify(shakenYears(5, true)) === "[2,4]", "中古5年=2�
   console.assert(calcTCO(ev, { ...base, years: 15 }).breakdown.tax === 25000 * 15, "EVは自動車税重課なし");
 }
 
+// 7年落ち購入 + 5年保有 = 車齢12年の残価と重課
+{
+  const car = CARS.find((c) => c.id === "yaris"); // resid 62/50/38/12, 30,500円/年
+  const o = { years: 5, annualKm: 10000, fuelPrice: 170, parkingMonthly: 0, insuranceAnnual: 60000, sell: true, buyAge: 7 };
+  const r = calcTCO(car, o);
+  // 取得価格 = 新車価格 × 7年残価率38%
+  console.assert(r.acquisition === Math.round(car.price * 0.38), "7年落ちの取得価格=7年残価率");
+  // 売却時車齢12年: 残価率 = y10(12%) - 2pt×2年 = 8%。総走行12万km=車齢12年×1万km基準で距離補正なし
+  console.assert(residualRate(car.resid, 12) === 8, "車齢12年=10年超カーブ(y10-2pt/年)");
+  console.assert(r.salePrice === Math.round(car.price * 0.08), "売却残価は車齢12年ベース");
+  // 自動車税: 保有各年の車齢は8〜12年 → 13年超なし、重課ゼロ
+  console.assert(r.breakdown.tax === 30500 * 5, "車齢12年までは自動車税重課なし");
+  // 対照: 7年落ち+8年保有(車齢最大15年)は車齢14,15年の2年分が15%重課
+  const r8 = calcTCO(car, { ...o, years: 8, sell: false });
+  console.assert(r8.breakdown.tax === Math.round(30500 * 6 + 30500 * 1.15 * 2), "7年落ち購入でも車齢14年以降は重課");
+  // 重量税: 7年落ち購入の初回車検は2年後(保有2年目=車齢9年)から。車齢13超の車検(保有8年時点の車検=車齢13,15…)
+  console.assert(JSON.stringify(shakenYears(5, true)) === "[2,4]", "中古は初回車検2年後(既存仕様維持)");
+}
+
 console.log("assert完了(エラー表示が無ければOK)");
 
 // --- 標準条件: 5年・年1万km・売却あり・新車 ---
-const opts = { years: 5, annualKm: 10000, fuelPrice: 170, parkingMonthly: 0, insuranceAnnual: 60000, sell: true, used: false };
+const opts = { years: 5, annualKm: 10000, fuelPrice: 170, parkingMonthly: 0, insuranceAnnual: 60000, sell: true, buyAge: 0 };
 console.log("\n== 5年・1万km/年・売却・新車 年あたりコスト順 ==");
 for (const r of calcAll(CARS, opts)) {
   const b = r.breakdown;
@@ -117,7 +136,7 @@ console.log("\n== 10年乗りつぶし 年あたりコスト順(上位5) ==");
 for (const r of calcAll(CARS, opts2).slice(0, 5)) console.log(`${r.car.name.padEnd(16, "　")} 年${man(r.perYear)}`);
 
 // --- 中古3年落ち5年 ---
-const opts3 = { ...opts, used: true };
+const opts3 = { ...opts, buyAge: 3 };
 console.log("\n== 中古3年落ち購入・5年・売却 年あたりコスト順(上位5) ==");
 for (const r of calcAll(CARS, opts3).slice(0, 5)) console.log(`${r.car.name.padEnd(16, "　")} 取得${man(r.acquisition)} 売却${man(r.salePrice)} 年${man(r.perYear)}`);
 

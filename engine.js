@@ -85,19 +85,21 @@ function shakenYears(years, isUsed) {
 // ---- メイン計算 -----------------------------------------------------------
 
 // car: data.jsの1要素
-// opts: { years, annualKm, fuelPrice, parkingMonthly, insuranceAnnual, sell(bool), used(bool) }
+// opts: { years, annualKm, fuelPrice, parkingMonthly, insuranceAnnual, sell(bool), buyAge(購入時車齢: 0=新車) }
 function calcTCO(car, opts, settings = DEFAULT_SETTINGS) {
-  const { years, annualKm, parkingMonthly, insuranceAnnual, sell, used } = opts;
+  const { years, annualKm, parkingMonthly, insuranceAnnual, sell } = opts;
+  const buyAge = opts.buyAge || 0;
+  const used = buyAge > 0;
   const fuelPrice = car.fuelPrice != null ? car.fuelPrice : opts.fuelPrice;
   const isKei = !car.ev && car.cc <= 660; // EVはcc:0でも軽扱いにしない
   const maintFactor = car.import ? settings.importMaintFactor : 1;
 
-  // 取得価格(中古3年落ち = 新車価格 × 3年残価率)
-  const acquisition = used ? car.price * (car.resid.y3 / 100) : car.price;
+  // 取得価格(中古 = 新車価格 × 購入時車齢の残価率。4点補間をそのまま使用)
+  const acquisition = used ? car.price * (residualRate(car.resid, buyAge) / 100) : car.price;
 
-  // 売却価格
-  const carAgeAtSale = years + (used ? 3 : 0);
-  const totalKmOnCar = annualKm * years + (used ? 3 * 10000 : 0); // 中古は前オーナー年1万km想定
+  // 売却価格(車齢 = 購入時車齢 + 保有年数)
+  const carAgeAtSale = years + buyAge;
+  const totalKmOnCar = annualKm * years + buyAge * 10000; // 中古は前オーナー年1万km想定
   let salePrice = 0;
   if (sell) {
     let rate = residualRate(car.resid, carAgeAtSale);
@@ -108,7 +110,7 @@ function calcTCO(car, opts, settings = DEFAULT_SETTINGS) {
   // 自動車税(初度登録13年超は15%重課。EVは対象外)。保有t年目の車齢 = 中古なら+3
   const taxBase = autoTax(car.cc, !!car.ev);
   let taxTotal = 0;
-  const ageOffset = used ? 3 : 0;
+  const ageOffset = buyAge;
   for (let t = 1; t <= years; t++) {
     const carAge = ageOffset + t;
     taxTotal += !car.ev && carAge > 13 ? taxBase * 1.15 : taxBase;
@@ -120,7 +122,7 @@ function calcTCO(car, opts, settings = DEFAULT_SETTINGS) {
   const perShakenJibai = isKei ? JIBAISEKI.m24kei : JIBAISEKI.m24;
   // 重量税は車検時点の車齢で重課判定(新車初回=車齢0で3年分、中古初回=車齢3)
   const wtInitial = used
-    ? weightTaxPerShaken(car.weight, isKei, !!car.eco, 3, !!car.ev)
+    ? weightTaxPerShaken(car.weight, isKei, !!car.eco, buyAge, !!car.ev)
     : Math.round(weightTaxPerShaken(car.weight, isKei, !!car.eco, 0, !!car.ev) * 1.5);
   const wtShakens = shakens.reduce(
     (sum, t) => sum + weightTaxPerShaken(car.weight, isKei, !!car.eco, ageOffset + t, !!car.ev),
