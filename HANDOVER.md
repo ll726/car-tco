@@ -21,7 +21,8 @@
 
 ## 未完了・途中の作業
 - 公開準備完了(免責フッター・OGP・docs/生成・README・git init・初回コミット済み)
-- GitHubリモートは未作成。push と Pages有効化(Settings → Pages → main /docs)はユーザー操作待ち
+- 公開済み: https://ll726.github.io/car-tco/ (repo: https://github.com/ll726/car-tco 、Pages = main /docs)
+- gh CLIはポータブル版を ~/gh-cli/bin/gh.exe に配置(PATH未登録。使う時はフルパスで)
 
 ## 次にやること(優先順)
 1. 残価率の精度向上(グレード別の差が大きい: カローラクロスZ HVは88-90%等。現状は車種平均の概算)
