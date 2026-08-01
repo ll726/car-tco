@@ -118,7 +118,7 @@
     <div class="tablewrap">
       <table>
         <thead>
-          <tr><th>#</th><th>車種</th><th>年あたり</th><th>総コスト</th><th title="新車は値引き相場を引いた実質価格、中古は買取相場×店頭マージン係数の理論値">取得価格*</th><th>売却価格</th><th>減価償却</th><th>税金</th><th>車検</th><th>燃料</th><th>保険</th><th>駐車場</th><th>消耗品</th></tr>
+          <tr><th>#</th><th>車種</th><th>年あたり</th><th>総コスト</th><th title="新車は値引き相場を引いた実質価格、中古は買取相場×店頭マージン係数の理論値">取得価格*</th><th>売却価格</th><th>納期</th><th>人気</th><th>減価償却</th><th>税金</th><th>車検</th><th>燃料</th><th>保険</th><th>駐車場</th><th>消耗品</th></tr>
         </thead>
         <tbody id="tbody"></tbody>
       </table>
@@ -340,6 +340,8 @@
           <td class="rank">${i + 1}</td><td>${r.car.name}${r.car.confidence === "low" ? "※" : ""}</td>
           <td class="peryear">${man(r.perYear)}円</td><td>${man(r.total)}円</td>
           <td>${man(r.acquisition)}円</td><td>${r.salePrice ? man(r.salePrice) + "円" : "—"}</td>
+          <td>${r.car.deliveryTime === "6ヶ月以上" ? `<span style="color:#d9480f;background:#fff4e6;padding:2px 6px;border-radius:4px;font-weight:700">⚠ ${r.car.deliveryTime}</span>` : r.car.deliveryTime || "—"}</td>
+          <td>${r.car.salesRank || "—"}</td>
           <td>${man(b.depreciation)}</td><td>${man(b.tax)}</td><td>${man(b.shaken)}</td>
           <td>${man(b.fuel)}</td><td>${man(b.insurance)}</td><td>${man(b.parking)}</td><td>${man(b.consumables)}</td>
         </tr>`;
@@ -533,8 +535,12 @@
           ${i === 0 ? `<div style="font-size:12px;color:var(--sub)">あなたの条件での実質年コスト</div>` : ""}
           <div style="font-size:${i === 0 ? 22 : 17}px;font-weight:700;color:var(--accent)">${man(r.perYear)}円<span style="font-size:12px;color:var(--sub)">/年</span></div>
           <div style="font-size:12px;color:var(--sub)">取得${man(r.acquisition)}円 / 総額${man(r.total)}円</div>
+          <div style="font-size:12px;margin-top:4px;${r.car.deliveryTime === "6ヶ月以上" ? "color:#d9480f;font-weight:700" : "color:var(--sub)"}">納期: ${r.car.deliveryTime || "—"}${r.car.salesRank ? ` / ${r.car.salesRank}` : ""}</div>
         </div>`
-      ).join("") + `</div>` + diffMsg +
+      ).join("") + `</div>` +
+      (winner.car.deliveryTime === "6ヶ月以上" && top3[1]
+        ? `<p style="background:#fff4e6;border:1px solid #ffc078;border-radius:8px;padding:10px 14px;font-size:13px">⚠ 1位の${winner.car.name}は納期${winner.car.deliveryTime}。すぐ乗りたい場合は<b>${top3[1].car.name}(2位・納期${top3[1].car.deliveryTime || "—"})</b>も検討を。</p>`
+        : "") + diffMsg +
       `<p><a href="#" id="wiz-apply" style="font-size:13px">▼ 全条件を自分で調整する(この条件をランキング表に反映)</a></p>`;
     $("wiz-apply").addEventListener("click", (e) => {
       e.preventDefault();
@@ -550,7 +556,7 @@
 
   $("footer").textContent =
     `残価率は買取相場ベースの概算です。実際の売却額・保険料・整備費は条件により変動します。※印の車種は残価率に推定値を含みます。` +
-    `取得価格*は新車=値引き相場込みの実質価格、中古購入価格=買取相場×店頭マージン係数による理論値です。実際の店頭価格・値引き額は店舗により異なります。データ基準日: ${DATA_DATE}`;
+    `取得価格*は新車=値引き相場込みの実質価格、中古購入価格=買取相場×店頭マージン係数による理論値です。実際の店頭価格・値引き額は店舗により異なります。納期は目安であり、グレード・地域・時期により大きく変動します。データ基準日: ${DATA_DATE}`;
 
   window.addEventListener("resize", render);
   render();
